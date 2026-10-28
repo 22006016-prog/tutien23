@@ -4,14 +4,16 @@ let width=960,height=540,scale=1,clock=0,last=0,walking=false,facing=1,saveTime=
 const player={...V.spawn},visited=new Set(),keys=new Set(),joy={x:0,y:0};let storage=true;
 try{const s=JSON.parse(localStorage.getItem('tutien-v1'));if(s){if(s.version===V.version&&Number.isFinite(s.x)&&Number.isFinite(s.y)&&!V.blocked(s.x,s.y)){player.x=s.x;player.y=s.y;}if(Array.isArray(s.visited))s.visited.filter(n=>V.places.some(p=>p.name===n)).forEach(n=>visited.add(n));}}catch{storage=false;}
 const $=s=>document.querySelector(s);
-function resize(){const frame=canvas.parentElement,dpr=Math.min(window.devicePixelRatio||1,2),zoom=frame.clientWidth<700?1.5:1.25;const cssW=Math.max(1,frame.clientWidth),cssH=Math.max(1,frame.clientHeight);width=Math.ceil(cssW*dpr);height=Math.ceil(cssH*dpr);canvas.width=width;canvas.height=height;canvas.style.width=cssW+'px';canvas.style.height=cssH+'px';ctx.imageSmoothingEnabled=false;scale=dpr*zoom;}
+let cameraZoom=1.20;
+try{const savedZoom=Number(localStorage.getItem('tutien-camera-zoom'));if(Number.isFinite(savedZoom)&&savedZoom>=.9&&savedZoom<=1.65)cameraZoom=savedZoom;}catch{}
+function resize(){const frame=canvas.parentElement,dpr=Math.min(window.devicePixelRatio||1,2),w=Math.max(1,frame.clientWidth),h=Math.max(1,frame.clientHeight);width=Math.ceil(w*dpr);height=Math.ceil(h*dpr);canvas.width=width;canvas.height=height;canvas.style.width=w+'px';canvas.style.height=h+'px';ctx.imageSmoothingEnabled=false;scale=dpr*cameraZoom;}
 new ResizeObserver(resize).observe(canvas.parentElement);
 function rect(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h));}
 function ellipse(x,y,rx,ry,c){ctx.fillStyle=c;ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2);ctx.fill();}
 function text(t,x,y,c='#f0e7bf',size=7){ctx.font=`${size}px monospace`;ctx.textAlign='center';ctx.fillStyle='#203c2b';ctx.fillText(t,x+1,y+1);ctx.fillStyle=c;ctx.fillText(t,x,y);}
 function character(x,y,npc=false){const frame=walking&&!npc?(Math.floor(clock*9)%3):0;const direction=facing===0?'up':facing===2?'left':facing===3?'right':'down';const sprite=npc?PixelTiles.sprites.elder:PixelTiles.sprites['hero-'+direction+'-'+frame];rect(x-8,y-1,16,3,'#213d3655');ctx.drawImage(sprite,Math.round(x-16),Math.round(y-30));if(npc)text('Trưởng thôn',x,y-39,'#e5d6a5',7);}
 
-function render(){ctx.clearRect(0,0,width,height);ctx.save();ctx.scale(scale,scale);const vw=width/scale,vh=height/scale;const cx=Math.max(0,Math.min(Math.max(0,V.W-vw),player.x-vw/2)),cy=Math.max(0,Math.min(Math.max(0,V.H-vh),player.y-vh/2));ctx.translate(-Math.round(cx),-Math.round(cy));Scenery.ground();if(Scenery.ready){Wildlife.draw(ctx);const people=[{...V.elder,npc:true},{...player,npc:false}].sort((a,b)=>a.y-b.y);for(const person of people){character(person.x,person.y,person.npc);if(!person.npc)text('Vô Danh',player.x,player.y-39,'#fff0c9',7);}drawEffect();Scenery.foreground();for(let i=0;i<22;i++){const x=(i*137+clock*5)%V.W,y=(i*211+Math.sin(clock*.7+i)*9)%V.H;rect(x,y,1,1,'#f3d4c699');}}ctx.restore();}
+function render(){ctx.clearRect(0,0,width,height);ctx.save();ctx.scale(scale,scale);const vw=width/scale,vh=height/scale;const cx=Math.max(0,Math.min(Math.max(0,V.W-vw),player.x-vw/2)),cy=Math.max(0,Math.min(Math.max(0,V.H-vh),player.y-vh/2));ctx.translate(-Math.round(cx),-Math.round(cy));Scenery.ground();if(Scenery.ready){Wildlife.draw(ctx);const people=[{...V.elder,npc:true},{...player,npc:false}].sort((a,b)=>a.y-b.y);for(const person of people){character(person.x,person.y,person.npc);if(!person.npc)text('Vô Danh',player.x,player.y-39,'#fff0c9',7);}drawEffect();for(let i=0;i<22;i++){const x=(i*137+clock*5)%V.W,y=(i*211+Math.sin(clock*.7+i)*9)%V.H;rect(x,y,1,1,'#f3d4c699');}}ctx.restore();}
 
 function toast(s){$('#toast').textContent=s;toastTime=4;$('#toast').style.opacity=1;}
 function save(){try{localStorage.setItem('tutien-v1',JSON.stringify({...player,version:V.version,visited:[...visited]}));}catch{storage=false;}$('#save-state').textContent=storage?'◈ Đã lưu hành trình trên thiết bị':'◈ Không thể lưu trên trình duyệt này';}
@@ -52,6 +54,11 @@ $('#map-overview').onclick=e=>{if(e.target===$('#map-overview'))toggleMap(false)
 window.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#map-overview').hidden){e.preventDefault();toggleMap(false);}});
 Scenery.loaded.then(ok=>{if(!ok)toast('Không tải được ảnh map — hãy tải lại trang');});
 
-function updateBrightnessControl(){const value=Scenery.brightness;$('#brightness').value=value;$('#brightness-value').textContent=value+'%';$('#overview-art').style.filter=`brightness(${value}%) saturate(95%)`;}
+function updateBrightnessControl(){const value=Scenery.brightness;$('#brightness').value=value;$('#brightness-value').textContent=value+'%';$('#overview-art').style.filter=`brightness(${value}%) saturate(92%) contrast(102%)`;}
 $('#brightness').addEventListener('input',e=>{keys.clear();Scenery.setBrightness(e.target.value);updateBrightnessControl();});
 updateBrightnessControl();
+
+const cameraInput=$('#camera-zoom');
+cameraInput.value=Math.round(cameraZoom*100);
+$('#camera-zoom-value').textContent=Math.round(cameraZoom*100)+'%';
+cameraInput.addEventListener('input',e=>{const value=Number(e.target.value);if(!Number.isFinite(value))return;cameraZoom=Math.max(.9,Math.min(1.65,value/100));$('#camera-zoom-value').textContent=Math.round(cameraZoom*100)+'%';try{localStorage.setItem('tutien-camera-zoom',String(cameraZoom));}catch{}resize();});
