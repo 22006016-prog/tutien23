@@ -11,3 +11,13 @@ test('arched bridge supports passage while neighbouring water blocks passage',()
 test('navigation rejects invalid coordinates and respects the artwork dimensions',()=>{assert.equal(V.W,2304);assert.equal(V.H,1536);for(const [x,y] of [[NaN,500],[500,Infinity],[-1,500],[2305,500],[500,1537]])assert.equal(V.blocked(x,y),true);});
 
 test('world area is expanded and the main avenue supports a broad walking cross-section',()=>{assert.equal(V.W*V.H/(1536*1024),2.25);for(let offset=-50;offset<=50;offset+=10)assert.equal(V.blocked((680+offset)*V.SCALE,300*V.SCALE),false,'main avenue '+offset);});
+
+test('every illustrated house has a reachable doorway path without crossing solid walls',()=>{
+ const reachable=flood();
+ assert.equal(V.doorPaths.length,V.buildings.length);
+ for(const d of V.doorPaths){
+  assert.equal(V.blocked(d.entry.x,d.entry.y),false,d.name+' doorway is blocked');
+  assert.ok(reachable.some(([x,y])=>Math.hypot(x-d.entry.x,y-d.entry.y)<11),d.name+' path is disconnected');
+ }
+ for(const b of V.buildings)assert.equal(V.blocked(b.x+b.w/2,b.y+b.h/2),true,b.name+' should remain solid');
+});
