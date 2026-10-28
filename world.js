@@ -1,4 +1,4 @@
-/* Thôn Khởi Nguyên v0.7 - shared geometry for paths, rendering and wildlife. */
+/* Thon Khoi Nguyen v0.7: one shared geometry for scenery, paths and wildlife. */
 (function(root){
 'use strict';
 const TILE=32,SCALE=1,W=2304,H=1536,name='Thôn Khởi Nguyên',version=7;
@@ -31,7 +31,7 @@ const places=[{x:1120,y:489,name:'Nhà trưởng thôn'},{x:473,y:515,name:'Dư�
 const landmarks={gate:{x:1120,y:1463},bridge:{x:2200,y:750},northwest:{x:475,y:515},northeast:{x:1702,y:518},meadow:{x:610,y:1260},northGate:{x:1120,y:70},westGate:{x:68,y:750},eastGate:{x:2240,y:750}};
 const riverEdge=y=>2088+Math.sin(y/173)*28+Math.sin(y/61)*8;
 const bridge={x:1980,y:680,w:324,h:144};
-function segmentDistance(x,y,a,b){const dx=b[0]-a[0],dy=b[1]-a[1],d=dx*dx+dy*dy;const t=d?Math.max(0,Math.min(1,((x-a[0])*dx+(y-a[1])*dy)/d)):0;return Math.hypot(x-a[0]-t*dx,y-a[1]-t*dy);}
+function segmentDistance(x,y,a,b){const dx=b[0]-a[0],dy=b[1]-a[1],d=dx*dx+dy*dy,t=d?Math.max(0,Math.min(1,((x-a[0])*dx+(y-a[1])*dy)/d)):0;return Math.hypot(x-a[0]-t*dx,y-a[1]-t*dy);}
 function onBridge(x,y){return x>=bridge.x&&x<=bridge.x+bridge.w&&y>=bridge.y&&y<=bridge.y+bridge.h;}
 function inFootpath(x,y){return clearings.some(c=>((x-c.x)/c.rx)**2+((y-c.y)/c.ry)**2<1)||routes.some(r=>r.p.some((p,i)=>i>0&&segmentDistance(x,y,r.p[i-1],p)<r.r));}
 function blocked(x,y){
