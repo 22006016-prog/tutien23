@@ -1,4 +1,4 @@
-# Tu Tiên — Thôn Khởi Nguyên · 0.5
+# Tu Tiên — Thôn Khởi Nguyên · 0.6
 
 Game khám phá 2D top-down trên trình duyệt, dùng toàn bộ tài nguyên nội bộ. Không có dependency hoặc bước build.
 
@@ -8,11 +8,13 @@ Game khám phá 2D top-down trên trình duyệt, dùng toàn bộ tài nguyên 
 
 ## Map mới
 
-`assets/thon-khoi-nguyen.png` là ảnh nền gốc 1536×1024 tạo cho dự án bằng công cụ sinh ảnh, lấy cảm hứng từ ảnh thôn được cung cấp. Cảnh có đường đất uốn quanh các cụm nhà mái ngói, sân vườn, ruộng thuốc, rừng trúc/đào, sông, cầu, bến thuyền và thác nước. Map hiện dùng ảnh nền vẽ sẵn; **không còn là terrain ghép từ bộ tile 32×32 của bản 0.4**. Nhân vật vẫn dùng sprite gốc 32×32, bốn hướng, ba tư thế mỗi hướng; hiển thị nguyên pixel, không làm mịn.
+`assets/thon-khoi-nguyen.png` là ảnh nền gốc 1536×1024, dựng thành thế giới 2304×1536 (diện tích thế giới bằng 2,25 lần bản 0.5), tạo cho dự án bằng công cụ sinh ảnh, lấy cảm hứng từ ảnh thôn được cung cấp. Cảnh mới có đường đất rộng, sân giữa thôn thoáng, hai nhà phụ phía bắc và nhánh bãi cỏ phía đông nam. Đường chính rộng khoảng 165–189 đơn vị thế giới, so với khoảng 58–70 ở bản trước. Kiến trúc, sông, cầu và vườn được bố trí lại để bớt chật. Ánh sáng chiều dịu, màu xanh rêu và đường đất trầm thay cho màu vàng/xanh chói. Map hiện dùng ảnh nền vẽ sẵn; **không còn là terrain ghép từ bộ tile 32×32 của bản 0.4**. Nhân vật vẫn dùng sprite gốc 32×32, bốn hướng, ba tư thế mỗi hướng; hiển thị nguyên pixel, không làm mịn.
+
+Menu ☰ có thanh **Độ sáng cảnh** từ 60% đến 110%, mặc định 92%. Tùy chọn lưu riêng trên thiết bị và áp dụng cho cả cảnh chơi lẫn bản đồ tổng quan. Lớp ảnh đã chỉnh màu được lưu đệm, không chạy bộ lọc lại mỗi frame. HUD và nhân vật giữ độ rõ.
 
 `world.js` định nghĩa các hành lang đi được theo lối mòn trên chính ảnh này, sân trống, vị trí nhà và chướng ngại vật. Nhà, giếng, mặt nước và rừng dày không đi xuyên được. Cảnh nền là một lớp phẳng; chưa có hệ thống tách lớp tán cây/mái nhà cho che khuất nhân vật. Muốn chỉnh cảnh bằng tile editor trong tương lai cần chuyển artwork thành tileset/layer riêng.
 
-Điểm bắt đầu và hồi sinh ở vòng ngọc giữa sân thôn `(696, 482)`. Menu ☰ → **Về điểm hồi sinh** quay về đó và giữ tiến độ. Chưa có hệ thống sinh tử; `respawn()` sẵn cho việc tích hợp sau. Save có phiên bản bản đồ; save cũ từ map 0.4 bắt đầu lại tại sân mới để tránh khôi phục vào nhà hoặc nước.
+Điểm bắt đầu và hồi sinh ở vòng ngọc giữa sân thôn `(1044, 711)`. Menu ☰ → **Về điểm hồi sinh** quay về đó và giữ tiến độ. Chưa có hệ thống sinh tử; `respawn()` sẵn cho việc tích hợp sau. Save có phiên bản bản đồ; save của phiên bản map cũ đưa vị trí về sân mới, giữ các địa điểm đã khám phá để tránh mất tiến độ hoặc khôi phục vào vật cản.
 
 Nút **Bản đồ** mở toàn cảnh cùng dấu vị trí nhân vật; đóng bằng × hoặc Escape. Nhân vật dừng di chuyển khi mở bản đồ.
 
@@ -29,9 +31,9 @@ Bốn địa điểm khám phá: nhà trưởng thôn, dược đường, tiệm
 
 ## Kiểm tra
 
-`npm test`: 7 kiểm tra gồm vị trí bắt đầu/địa điểm, vật cản, đường kết nối tới tất cả địa điểm/cổng/cầu, nước/rừng, sân hồi sinh, cầu cong và tọa độ ngoài biên. `node --check game.js` kiểm tra cú pháp.
+`npm test`: 8 kiểm tra gồm vị trí bắt đầu/địa điểm, vật cản, đường kết nối tới tất cả địa điểm/cổng/cầu, nước/rừng, sân hồi sinh, cầu cong tọa độ ngoài biên, kích thước thế giới và bề rộng đường chính. `node --check game.js` kiểm tra cú pháp.
 
-Đã kiểm tra bằng Chromium: tải artwork cục bộ, WASD, hội thoại, hồi sinh, lưu/tải lại, mở/đóng bản đồ, tạm dừng khi xem bản đồ và sự kiện cảm ứng thực qua CDP trên viewport điện thoại. Không có request tới tài nguyên bên ngoài. Chưa kiểm tra trên điện thoại vật lý.
+Đã kiểm tra bằng Chromium: tải artwork cục bộ, WASD, hội thoại, hồi sinh, lưu/tải lại, mở/đóng bản đồ, tạm dừng khi xem bản đồ và sự kiện cảm ứng thực qua CDP trên viewport điện thoại. Đã kiểm tra thêm mặc định độ sáng, thay đổi thực tế của pixel cảnh, điều khiển slider bằng bàn phím, lưu độ sáng sau reload và giữ tiến độ cũ khi chuyển map. Không có request tới tài nguyên bên ngoài. Chưa kiểm tra trên điện thoại vật lý.
 
 Ảnh hiện tại: `docs/map-illustrated-desktop.png`, `docs/map-illustrated-mobile.png`, `docs/map-overview.png`. Ảnh `map-32px.png` và `assets/tileset-32.png` lưu bản thiết kế 0.4 trước đó, không đại diện map mới.
 

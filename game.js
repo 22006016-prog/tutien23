@@ -2,7 +2,7 @@
 const canvas=document.querySelector('#game'),ctx=canvas.getContext('2d'),V=Village;
 let width=960,height=540,scale=1,clock=0,last=0,walking=false,facing=1,saveTime=0,toastTime=5,dialogOpen=false;
 const player={...V.spawn},visited=new Set(),keys=new Set(),joy={x:0,y:0};let storage=true;
-try{const s=JSON.parse(localStorage.getItem('tutien-v1'));if(s&&s.version===V.version&&Number.isFinite(s.x)&&Number.isFinite(s.y)&&!V.blocked(s.x,s.y)){player.x=s.x;player.y=s.y;(s.visited||[]).filter(n=>V.places.some(p=>p.name===n)).forEach(n=>visited.add(n));}}catch{storage=false;}
+try{const s=JSON.parse(localStorage.getItem('tutien-v1'));if(s){if(s.version===V.version&&Number.isFinite(s.x)&&Number.isFinite(s.y)&&!V.blocked(s.x,s.y)){player.x=s.x;player.y=s.y;}if(Array.isArray(s.visited))s.visited.filter(n=>V.places.some(p=>p.name===n)).forEach(n=>visited.add(n));}}catch{storage=false;}
 const $=s=>document.querySelector(s);
 function resize(){const frame=canvas.parentElement;const zoom=frame.clientWidth<700?1:2;width=Math.ceil(frame.clientWidth/zoom);height=Math.ceil(frame.clientHeight/zoom);canvas.width=width;canvas.height=height;canvas.style.width=width*zoom+'px';canvas.style.height=height*zoom+'px';ctx.imageSmoothingEnabled=false;scale=1;}
 new ResizeObserver(resize).observe(canvas.parentElement);
@@ -21,7 +21,7 @@ $('#progress').textContent=`Địa điểm đã ghé: ${visited.size} / 4`;$('#i
 toastTime-=dt;if(toastTime<0)$('#toast').style.opacity=0;saveTime+=dt;if(saveTime>3){save();saveTime=0;}}
 function loop(t){const dt=Math.min((t-last)/1000||0,.035);last=t;update(dt);render();requestAnimationFrame(loop);}requestAnimationFrame(loop);
 function interact(){if(dialogOpen){dialogOpen=false;$('#dialog').hidden=true;return;}if(Math.hypot(player.x-V.elder.x,player.y-V.elder.y)>65)return;dialogOpen=true;$('#dialog p').textContent='Thiếu hiệp mới đến sao? Đây là Thôn Khởi Nguyên. Hãy ghé dược đường phía tây, tiệm rèn phía đông và cây cổ thụ ở phía nam. Tiên lộ còn dài, cứ thong thả bước đi.';$('#dialog').hidden=false;}
-window.addEventListener('keydown',e=>{if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();keys.add(e.key.toLowerCase());if(!e.repeat&&(e.key.toLowerCase()==='e'||e.key==='Enter'))interact();});window.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));window.addEventListener('blur',()=>{keys.clear();joy.x=joy.y=0;});document.addEventListener('visibilitychange',()=>{keys.clear();joy.x=joy.y=0;save();});
+window.addEventListener('keydown',e=>{if(e.target instanceof HTMLInputElement||e.target instanceof HTMLTextAreaElement)return;if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();keys.add(e.key.toLowerCase());if(!e.repeat&&(e.key.toLowerCase()==='e'||e.key==='Enter'))interact();});window.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));window.addEventListener('blur',()=>{keys.clear();joy.x=joy.y=0;});document.addEventListener('visibilitychange',()=>{keys.clear();joy.x=joy.y=0;save();});
 $('#interact').onclick=interact;$('#close-dialog').onclick=interact;$('#quest-toggle').onclick=()=>{const collapsed=$('.quest').classList.toggle('collapsed');$('#quest-toggle').textContent=collapsed?'+':'−';$('#quest-toggle').setAttribute('aria-label',collapsed?'Mở nhiệm vụ':'Thu gọn nhiệm vụ');};
 let pointer=null;function moveStick(e){const r=$('#joystick').getBoundingClientRect();let x=e.clientX-r.left-r.width/2,y=e.clientY-r.top-r.height/2,len=Math.hypot(x,y),m=Math.min(1,34/(len||1));x*=m;y*=m;joy.x=x/34;joy.y=y/34;$('#stick').style.transform=`translate(${x}px,${y}px)`;}
 $('#joystick').addEventListener('pointerdown',e=>{if(pointer!==null)return;pointer=e.pointerId;e.currentTarget.setPointerCapture(pointer);moveStick(e);});$('#joystick').addEventListener('pointermove',e=>{if(e.pointerId===pointer)moveStick(e);});function release(e){if(e.pointerId!==pointer)return;pointer=null;joy.x=joy.y=0;$('#stick').style.transform='';}for(const name of ['pointerup','pointercancel','lostpointercapture'])$('#joystick').addEventListener(name,release);
@@ -40,7 +40,7 @@ function meditate(){meditating=!meditating;toast(meditating?'Đả tọa — tĩ
 $('#cultivate').onclick=meditate;$('#meditate').onclick=meditate;
 $('#help').onclick=()=>{ $('#menu').hidden=false;$('#menu-toggle').setAttribute('aria-expanded','true');};
 $('#attack').onclick=()=>{if(!$('#interact').hidden||dialogOpen)interact();else cast(0);};
-window.addEventListener('keydown',e=>{if(e.repeat||e.target instanceof HTMLButtonElement)return;if(/^[1-6]$/.test(e.key))cast(Number(e.key)-1);if(e.code==='Space')$('#attack').click();if(e.key.toLowerCase()==='t')meditate();if(e.key==='Escape'&&!$('#menu').hidden)$('#menu-toggle').click();});
+window.addEventListener('keydown',e=>{if(e.repeat||e.target instanceof HTMLButtonElement||e.target instanceof HTMLInputElement||e.target instanceof HTMLTextAreaElement)return;if(/^[1-6]$/.test(e.key))cast(Number(e.key)-1);if(e.code==='Space')$('#attack').click();if(e.key.toLowerCase()==='t')meditate();if(e.key==='Escape'&&!$('#menu').hidden)$('#menu-toggle').click();});
 
 function respawn(){player.x=V.spawn.x;player.y=V.spawn.y;keys.clear();joy.x=joy.y=0;meditating=false;effect=null;dialogOpen=false;$('#dialog').hidden=true;save();toast('Đã trở về Linh Thạch — điểm khởi đầu / hồi sinh');}
 $('#return-spawn').onclick=()=>{respawn();$('#menu').hidden=true;$('#menu-toggle').setAttribute('aria-expanded','false');};
@@ -51,3 +51,7 @@ $('#map-peek').onclick=()=>toggleMap(true);$('#open-map').onclick=()=>toggleMap(
 $('#map-overview').onclick=e=>{if(e.target===$('#map-overview'))toggleMap(false);};
 window.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#map-overview').hidden){e.preventDefault();toggleMap(false);}});
 Scenery.loaded.then(ok=>{if(!ok)toast('Không tải được ảnh map — hãy tải lại trang');});
+
+function updateBrightnessControl(){const value=Scenery.brightness;$('#brightness').value=value;$('#brightness-value').textContent=value+'%';$('#overview-art').style.filter=`brightness(${value}%) saturate(95%)`;}
+$('#brightness').addEventListener('input',e=>{keys.clear();Scenery.setBrightness(e.target.value);updateBrightnessControl();});
+updateBrightnessControl();

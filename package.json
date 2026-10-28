@@ -1,6 +1,6 @@
 {
   "name": "tu-tien-thanh-khe",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
   "scripts": { "start": "python3 -m http.server 8080 --bind 127.0.0.1", "test": "node tests/world.test.cjs" }
 }
