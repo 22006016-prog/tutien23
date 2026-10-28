@@ -29,15 +29,16 @@
  // Short, painted footpaths from each house porch to the existing village streets.
  // Points and widths below are in the original 1536x1024 illustration coordinates.
  const doorwaySpecs=[
-  {name:'Nhà trưởng thôn',entry:[680,235],r:22,p:[[680,232],[680,258],[680,286]]},
-  {name:'Dược đường',entry:[300,504],r:20,p:[[300,497],[301,519],[302,540]]},
-  {name:'Tiệm rèn',entry:[1100,510],r:20,p:[[1100,498],[1100,525],[1100,554]]},
-  {name:'Khách điếm',entry:[475,767],r:18,p:[[475,758],[478,778],[493,791]]},
-  {name:'Nhà dân',entry:[951,773],r:18,p:[[947,765],[949,785],[952,801]]},
-  {name:'Nhà ven ruộng',entry:[274,136],r:16,p:[[274,125],[274,147],[274,171]]},
-  {name:'Nhà sườn núi',entry:[1103,150],r:16,p:[[1103,137],[1103,151],[1103,170]]}
+  // Paths stop at each porch; house interiors stay solid. The narrow gate marks the fence opening.
+  {name:'Nhà trưởng thôn',entry:[680,235],r:12,p:[[680,232],[680,258],[680,286]]},
+  {name:'Dược đường',entry:[300,504],r:11,gate:[300,519],p:[[300,497],[301,519],[302,540]]},
+  {name:'Tiệm rèn',entry:[1100,510],r:11,gate:[1100,497],p:[[1100,498],[1100,525],[1100,554]]},
+  {name:'Khách điếm',entry:[475,767],r:12,gate:[475,770],p:[[475,758],[478,778],[493,791]]},
+  {name:'Nhà dân',entry:[951,773],r:12,gate:[951,781],p:[[947,765],[949,785],[952,801]]},
+  {name:'Nhà ven ruộng',entry:[274,136],r:10,p:[[274,125],[274,147],[274,171]]},
+  {name:'Nhà sườn núi',entry:[1103,150],r:10,p:[[1103,137],[1103,151],[1103,170]]}
  ];
- const doorPaths=doorwaySpecs.map(d=>({name:d.name,entry:position(...d.entry),r:d.r*SCALE,p:d.p.map(point)}));
+ const doorPaths=doorwaySpecs.map(d=>({name:d.name,entry:position(...d.entry),gate:d.gate?position(...d.gate):null,r:d.r*SCALE,p:d.p.map(point)}));
  const clearings=[{x:696,y:474,rx:157,ry:124},{x:700,y:879,rx:66,ry:58},{x:1100,y:515,rx:62,ry:29},{x:280,y:520,rx:54,ry:29},{x:470,y:773,rx:53,ry:23},{x:951,y:780,rx:49,ry:22},{x:1135,y:861,rx:85,ry:53},{x:130,y:329,rx:74,ry:35}].map(p=>({x:p.x*SCALE,y:p.y*SCALE,rx:p.rx*SCALE,ry:p.ry*SCALE}));
  const solids=[{x:851,y:469,w:42,h:58},{x:632,y:394,w:14,h:37},{x:746,y:394,w:14,h:37},{x:630,y:507,w:18,h:25},{x:747,y:510,w:18,h:25},{x:1163,y:837,w:57,h:61}].map(b=>({x:b.x*SCALE,y:b.y*SCALE,w:b.w*SCALE,h:b.h*SCALE}));
  const places=[{x:680,y:269,name:'Nhà trưởng thôn'},{x:300,y:532,name:'Dược đường'},{x:1100,y:522,name:'Tiệm rèn'},{x:652,y:659,name:'Cổ thụ đầu thôn'}].map(p=>({...position(p.x,p.y),name:p.name}));
