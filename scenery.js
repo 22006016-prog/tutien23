@@ -53,24 +53,36 @@ const Scenery=(()=>{
  // rectangular dirt overlay, this soft local repair keeps the original scene.
  // All sampling is performed once when the cached scenery is rebuilt.
  function clearResidentFence(paint){
-  // Use the real grassy ground just south of this fence. Pixel copies retain
-  // leaf/soil detail and avoid flat beige shapes or streaky color interpolation.
-  const sx=825,sy=745,w=310,h=145;
+  // Only the HORIZONTAL front fence of the south-east residence is removed.
+  // The side fences, rear fence, roof, gardens and houses are not modified.
+  // Coordinates are in the untouched 1536x1024 Map B illustration.
+  const x0=834,y0=744,w=292,h=81;
   let pixels;
-  try{pixels=paint.getImageData(sx,sy,w,h);}catch{return;}
-  const before=new Uint8ClampedArray(pixels.data),dest=pixels.data;
-  const clamp=v=>Math.max(0,Math.min(1,v));
-  for(let y=sy;y<sy+h;y++)for(let x=sx;x<sx+w;x++){
-   const top=755+3*Math.sin(x/29)+1.5*Math.sin(x/11);
-   const bottom=821+3*Math.sin(x/34)+2*Math.sin(x/15);
-   const edge=Math.min(y-top,bottom-y,x-835-3*Math.sin(y/20),1120+3*Math.sin(y/22)-x);
-   if(edge<=0)continue;
-   const alpha=clamp(edge/9);
-   const sampleY=Math.max(sy,Math.min(sy+h-1,Math.floor(825+(y-top)/(bottom-top)*57)));
-   const i=((y-sy)*w+(x-sx))*4,source=((sampleY-sy)*w+(x-sx))*4;
-   for(let c=0;c<3;c++)dest[i+c]=before[i+c]*(1-alpha)+before[source+c]*alpha;
+  try{pixels=paint.getImageData(x0,y0,w,h);}catch{return;}
+  const original=new Uint8ClampedArray(pixels.data),result=pixels.data;
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const mirror=(v,span)=>{const n=((v%(span*2))+(span*2))%(span*2);return n<=span?n:span*2-n;};
+  // A clean, unoccupied patch of grass just SOUTH of the front fence.
+  // We reflect/mix its pixels instead of drawing a uniform beige shape.
+  const sample=document.createElement('canvas');
+  sample.width=68;sample.height=39;
+  const sampleCtx=sample.getContext('2d',{willReadFrequently:true});
+  sampleCtx.drawImage(image,998,822,68,39,0,0,68,39);
+  const grass=sampleCtx.getImageData(0,0,68,39).data;
+  for(let y=y0;y<y0+h;y++)for(let x=x0;x<x0+w;x++){
+    const top=754+2.2*Math.sin(x/39)+Math.sin(x/13);
+    const bottom=819+2*Math.sin(x/37);
+    // Leave the two side fences and corner posts intact.
+    const left=841+2*Math.sin(y/23),right=1117+3*Math.sin(y/22);
+    const edge=Math.min(y-top,bottom-y,x-left,right-x);
+    if(edge<=0)continue;
+    const a=clamp(edge/8,0,1);
+    const sx=clamp(Math.round(mirror((x-841)*.82+y*.09,66)),0,67);
+    const sy=clamp(Math.round(mirror((y-top)*.6+x*.045,37)),0,38);
+    const dst=((y-y0)*w+x-x0)*4,src=(sy*68+sx)*4;
+    for(let c=0;c<3;c++)result[dst+c]=original[dst+c]*(1-a)+grass[src+c]*a;
   }
-  paint.putImageData(pixels,sx,sy);
+  paint.putImageData(pixels,x0,y0);
  }
  // Keep the illustrated ground intact. Only open a narrow section of fence and
  // scatter a few cobbles at the four yards whose fences cross the approach.
