@@ -4,8 +4,8 @@ let width=960,height=540,scale=1,clock=0,last=0,walking=false,facing=1,saveTime=
 const player={...V.spawn},visited=new Set(),keys=new Set(),joy={x:0,y:0};let storage=true;
 try{const s=JSON.parse(localStorage.getItem('tutien-v1'));if(s){if(s.version===V.version&&Number.isFinite(s.x)&&Number.isFinite(s.y)&&!V.blocked(s.x,s.y)){player.x=s.x;player.y=s.y;}if(Array.isArray(s.visited))s.visited.filter(n=>V.places.some(p=>p.name===n)).forEach(n=>visited.add(n));}}catch{storage=false;}
 const $=s=>document.querySelector(s);
-let cameraZoom=1.20;
-try{const savedZoom=Number(localStorage.getItem('tutien-camera-zoom'));if(Number.isFinite(savedZoom)&&savedZoom>=.9&&savedZoom<=1.65)cameraZoom=savedZoom;}catch{}
+let cameraZoom=.95;
+try{const savedZoom=Number(localStorage.getItem('tutien-camera-zoom-b8'));if(Number.isFinite(savedZoom)&&savedZoom>=.85&&savedZoom<=1.65)cameraZoom=savedZoom;}catch{}
 function resize(){const frame=canvas.parentElement,dpr=Math.min(window.devicePixelRatio||1,2),w=Math.max(1,frame.clientWidth),h=Math.max(1,frame.clientHeight);width=Math.ceil(w*dpr);height=Math.ceil(h*dpr);canvas.width=width;canvas.height=height;canvas.style.width=w+'px';canvas.style.height=h+'px';ctx.imageSmoothingEnabled=false;scale=dpr*cameraZoom;}
 new ResizeObserver(resize).observe(canvas.parentElement);
 function rect(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h));}
@@ -54,11 +54,11 @@ $('#map-overview').onclick=e=>{if(e.target===$('#map-overview'))toggleMap(false)
 window.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#map-overview').hidden){e.preventDefault();toggleMap(false);}});
 Scenery.loaded.then(ok=>{if(!ok)toast('Không tải được ảnh map — hãy tải lại trang');});
 
-function updateBrightnessControl(){const value=Scenery.brightness;$('#brightness').value=value;$('#brightness-value').textContent=value+'%';$('#overview-art').style.filter=`brightness(${value}%) saturate(92%) contrast(102%)`;}
+function updateBrightnessControl(){const value=Scenery.brightness;$('#brightness').value=value;$('#brightness-value').textContent=value+'%';$('#overview-art').style.filter=`brightness(${value}%) saturate(97%) contrast(106%)`;}
 $('#brightness').addEventListener('input',e=>{keys.clear();Scenery.setBrightness(e.target.value);updateBrightnessControl();});
 updateBrightnessControl();
 
 const cameraInput=$('#camera-zoom');
 cameraInput.value=Math.round(cameraZoom*100);
 $('#camera-zoom-value').textContent=Math.round(cameraZoom*100)+'%';
-cameraInput.addEventListener('input',e=>{const value=Number(e.target.value);if(!Number.isFinite(value))return;cameraZoom=Math.max(.9,Math.min(1.65,value/100));$('#camera-zoom-value').textContent=Math.round(cameraZoom*100)+'%';try{localStorage.setItem('tutien-camera-zoom',String(cameraZoom));}catch{}resize();});
+cameraInput.addEventListener('input',e=>{const value=Number(e.target.value);if(!Number.isFinite(value))return;cameraZoom=Math.max(.85,Math.min(1.65,value/100));$('#camera-zoom-value').textContent=Math.round(cameraZoom*100)+'%';try{localStorage.setItem('tutien-camera-zoom-b8',String(cameraZoom));}catch{}resize();});
