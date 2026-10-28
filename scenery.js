@@ -27,33 +27,22 @@ const Scenery=(()=>{
  // rectangular dirt overlay, this soft local repair keeps the original scene.
  // All sampling is performed once when the cached scenery is rebuilt.
  function clearResidentFence(paint){
-  const sx=825,sy=734,w=309,h=109;
+  // Use the real grassy ground just south of this fence. Pixel copies retain
+  // leaf/soil detail and avoid flat beige shapes or streaky color interpolation.
+  const sx=825,sy=745,w=310,h=145;
   let pixels;
   try{pixels=paint.getImageData(sx,sy,w,h);}catch{return;}
   const before=new Uint8ClampedArray(pixels.data),dest=pixels.data;
-  const smooth=v=>Math.max(0,Math.min(1,v));
-  const noise=(x,y)=>{const v=Math.sin(x*127.1+y*311.7)*43758.5453;return v-Math.floor(v);};
-  const at=(x,y,c)=>before[((y-sy)*w+(x-sx))*4+c];
-  for(let y=sy;y<sy+h;y++){
-   for(let x=sx;x<sx+w;x++){
-    // Uneven boundaries follow the ground, avoiding a visible rectangular edge.
-    const top=758+3*Math.sin(x/26)+2*Math.sin(x/10);
-    const bottom=817+4*Math.sin(x/28)+2*Math.sin(x/12);
-    const left=835+4*Math.sin(y/17),right=1120+4*Math.sin(y/21);
-    const margin=Math.min(y-top,bottom-y,x-left,right-x);
-    if(margin<=0)continue;
-    const alpha=smooth(margin/9);
-    const t=smooth((y-top)/(bottom-top));
-    const hsh=noise(x,y);
-    const ox=Math.max(sx,Math.min(sx+w-1,x+Math.floor(hsh*5)-2));
-    const topY=Math.max(sy,Math.floor(top)-8-Math.floor(noise(x,11+y)*7));
-    const botY=Math.min(sy+h-1,Math.floor(bottom)+7+Math.floor(noise(x,33+y)*6));
-    const i=((y-sy)*w+(x-sx))*4;
-    for(let c=0;c<3;c++){
-     const recovered=at(ox,topY,c)*(1-t)+at(ox,botY,c)*t;
-     dest[i+c]=before[i+c]*(1-alpha)+(recovered+(hsh-.5)*4)*alpha;
-    }
-   }
+  const clamp=v=>Math.max(0,Math.min(1,v));
+  for(let y=sy;y<sy+h;y++)for(let x=sx;x<sx+w;x++){
+   const top=755+3*Math.sin(x/29)+1.5*Math.sin(x/11);
+   const bottom=821+3*Math.sin(x/34)+2*Math.sin(x/15);
+   const edge=Math.min(y-top,bottom-y,x-835-3*Math.sin(y/20),1120+3*Math.sin(y/22)-x);
+   if(edge<=0)continue;
+   const alpha=clamp(edge/9);
+   const sampleY=Math.max(sy,Math.min(sy+h-1,Math.floor(825+(y-top)/(bottom-top)*57)));
+   const i=((y-sy)*w+(x-sx))*4,source=((sampleY-sy)*w+(x-sx))*4;
+   for(let c=0;c<3;c++)dest[i+c]=before[i+c]*(1-alpha)+before[source+c]*alpha;
   }
   paint.putImageData(pixels,sx,sy);
  }
