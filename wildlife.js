@@ -1,9 +1,10 @@
 /* Autonomous ambient birds, chickens, cats and dogs. Movement and fear are local. */
 const Wildlife=(()=>{
 'use strict';const V=Village,animals=[];
-const homes=[[503,554],[648,625],[840,815],[1420,823],[1670,560],[1730,1085],[530,1128],[1130,1094],[1070,520],[1200,890],[1860,740],[860,525],[1400,535],[1660,985],[355,790],[1370,1130]];
 const types=['chicken','chicken','chicken','cat','dog','chicken','cat','dog','chicken','cat','dog','chicken','cat','chicken','dog','chicken'];
-homes.forEach((pos,i)=>{let [x,y]=pos;if(V.blocked(x,y)){const c=V.clearings.find(c=>!V.blocked(c.x,c.y));if(c){x=c.x+(i%3-1)*24;y=c.y+(i%4-1)*19;}}animals.push({type:types[i],x,y,hx:x,hy:y,heading:i*1.31,pace:0,turn:i%5+1,scared:0,phase:i*.73});});
+const anchors=[...V.places,V.spawn,V.landmarks.gate,V.landmarks.meadow];
+const homes=types.map((_,i)=>{const a=anchors[i%anchors.length];for(let r=18;r<155;r+=14)for(let k=0;k<12;k++){const t=k*Math.PI/6+i*.37,x=a.x+Math.cos(t)*r,y=a.y+Math.sin(t)*r;if(!V.blocked(x,y))return [x,y];}return [V.spawn.x,V.spawn.y];});
+homes.forEach(([x,y],i)=>{animals.push({type:types[i],x,y,hx:x,hy:y,heading:i*1.31,pace:0,turn:i%5+1,scared:0,phase:i*.73});});
 for(let i=0;i<7;i++)animals.push({type:'bird',x:110+i*300,y:130+i%3*370,heading:i*.2,phase:i*.9,scared:0,pace:0,turn:0});
 function move(a,dx,dy){const nx=a.x+dx,ny=a.y+dy;if(!V.blocked(nx,ny)){a.x=nx;a.y=ny;return true;}if(!V.blocked(nx,a.y)){a.x=nx;return true;}if(!V.blocked(a.x,ny)){a.y=ny;return true;}return false;}
 function update(dt,player){
