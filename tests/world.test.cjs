@@ -21,3 +21,17 @@ test('every illustrated house has a reachable doorway path without crossing soli
  }
  for(const b of V.buildings)assert.equal(V.blocked(b.x+b.w/2,b.y+b.h/2),true,b.name+' should remain solid');
 });
+
+test('south-east residence has an open yard with five reachable NPC positions',()=>{
+ const reachable=flood();
+ assert.equal(V.npcSpots.length,5);
+ const house=V.buildings.find(b=>b.name==='Nhà dân');
+ assert.ok(house,'Residential house exists');
+ for(const [i,p] of V.npcSpots.entries()){
+  assert.equal(V.blocked(p.x,p.y),false,'NPC slot '+i+' is blocked');
+  assert.ok(p.y>house.y+house.h,'NPCs stand outside the house footprint');
+  assert.ok(reachable.some(([x,y])=>Math.hypot(x-p.x,y-p.y)<12),'NPC slot '+i+' is unreachable');
+ }
+ assert.ok(V.npcCourtyard.rx>=200,'Courtyard is broad enough for multiple NPCs');
+ assert.equal(V.blocked(house.x+house.w/2,house.y+house.h/2),true,'House remains solid');
+});
