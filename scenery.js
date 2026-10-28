@@ -5,21 +5,47 @@ const Scenery=(()=>{
  let sharpReady=false;
  let ready=false,failed=false,brightness=92;
  try{const saved=Number(localStorage.getItem('tutien-brightness'));if(Number.isFinite(saved)&&saved>=60&&saved<=110)brightness=saved;}catch{}
- // Prepare moderate unsharp-mask detail once; changing brightness never repeats this work.
+ // Build the map ONCE at the real playable-world resolution.
+ // The old pipeline sharpened 1536x1024 pixels, then enlarged them 1.5x
+ // every frame; that made tiny roofs, fences and paving details look soft.
  function prepareSharpArt(){
   if(sharpReady||!image.naturalWidth)return;
-  sharpLayer.width=image.naturalWidth;sharpLayer.height=image.naturalHeight;
-  const sc=sharpLayer.getContext('2d',{willReadFrequently:true});
-  sc.drawImage(image,0,0);
+  const source=document.createElement('canvas');
+  source.width=image.naturalWidth;source.height=image.naturalHeight;
+  const art=source.getContext('2d',{willReadFrequently:true});
+  art.drawImage(image,0,0);
+  clearResidentFence(art); // retain the open resident NPC courtyard
+  paintEntrances(art);     // retain the small gates at other houses
+
+  sharpLayer.width=V.W;sharpLayer.height=V.H;
+  const output=sharpLayer.getContext('2d',{willReadFrequently:true});
+  output.imageSmoothingEnabled=true;
+  output.imageSmoothingQuality='high';
+  output.drawImage(source,0,0,source.width,source.height,0,0,V.W,V.H);
+  // Edge-adaptive sharpening at 2304x1536 (not at the smaller source
+  // resolution). The threshold prevents amplification of flat-area noise.
   try{
-   const pixels=sc.getImageData(0,0,sharpLayer.width,sharpLayer.height);
-   const source=new Uint8ClampedArray(pixels.data),dest=pixels.data,w=sharpLayer.width,h=sharpLayer.height,a=.18;
-   for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){
-    const i=(y*w+x)*4;
-    for(let c=0;c<3;c++)dest[i+c]=Math.max(0,Math.min(255,source[i+c]*(1+4*a)-a*(source[i+c-4]+source[i+c+4]+source[i+c-w*4]+source[i+c+w*4])));
+   const pixels=output.getImageData(0,0,V.W,V.H);
+   const data=pixels.data,original=new Uint8ClampedArray(data);
+   const row=V.W*4;
+   for(let y=1;y<V.H-1;y++){
+    for(let x=1;x<V.W-1;x++){
+     const i=y*row+x*4;
+     for(let c=0;c<3;c++){
+      const k=i+c,center=original[k];
+      const neighbor=(original[k-4]+original[k+4]+original[k-row]+original[k+row])*.25;
+      const diff=center-neighbor;
+      if(Math.abs(diff)>3){
+       const correction=Math.max(-31,Math.min(31,diff*1.45));
+       data[k]=Math.max(0,Math.min(255,center+correction));
+      }
+     }
+    }
    }
-   sc.putImageData(pixels,0,0);
-  }catch(err){ /* Keep the original image if image pixels are unavailable. */ }
+   output.putImageData(pixels,0,0);
+  }catch(err){
+   // Keep the high-resolution image if canvas pixel access is unsupported.
+  }
   sharpReady=true;
  }
  // Remove the south-east residence's front fence by borrowing texture from
@@ -90,12 +116,14 @@ const Scenery=(()=>{
  function rebuild(){
   if(!image.naturalWidth)return;
   prepareSharpArt();
-  layer.width=image.naturalWidth;layer.height=image.naturalHeight;
-  const paint=layer.getContext('2d');paint.imageSmoothingEnabled=false;
-  paint.filter=`brightness(${brightness}%) saturate(97%) contrast(106%)`;
-  paint.drawImage(sharpLayer,0,0);paint.filter='none';
-  clearResidentFence(paint);
-  paintEntrances(paint);
+  // No additional 1.5x enlargement in the render loop: this cache is
+  // precisely the same size as the game world (2304x1536).
+  layer.width=V.W;layer.height=V.H;
+  const paint=layer.getContext('2d');
+  paint.imageSmoothingEnabled=false;
+  paint.filter=`brightness(${brightness}%) saturate(101%) contrast(108%)`;
+  paint.drawImage(sharpLayer,0,0);
+  paint.filter='none';
  }
  function setBrightness(value){const number=Number(value);if(!Number.isFinite(number))return;brightness=Math.max(60,Math.min(110,Math.round(number)));rebuild();try{localStorage.setItem('tutien-brightness',String(brightness));}catch{}}
  const loaded=new Promise(resolve=>{image.onload=()=>{rebuild();ready=true;resolve(true);};image.onerror=()=>{failed=true;resolve(false);};});
