@@ -4,3 +4,7 @@
 .overview-image{width:fit-content;max-width:100%;margin:auto}.overview-image img{width:auto;max-width:100%;height:auto}
 
 .brightness-control{display:block;font-size:12px;color:#c5d0b7;padding:12px 0 7px}.brightness-control output{float:right;color:#d7c08b}.brightness-control input{width:100%;display:block;margin:13px 0 2px;accent-color:#a4ad81;cursor:pointer}.brightness-control input:focus-visible{outline:2px solid #cfbc84;outline-offset:3px}
+
+/* Map B preserves the illustrated background and uses native-resolution canvas. */
+#game{image-rendering:auto}
+.overview-image img{image-rendering:auto}
