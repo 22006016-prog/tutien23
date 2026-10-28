@@ -13,7 +13,7 @@ const Scenery=(()=>{
   sc.drawImage(image,0,0);
   try{
    const pixels=sc.getImageData(0,0,sharpLayer.width,sharpLayer.height);
-   const source=new Uint8ClampedArray(pixels.data),dest=pixels.data,w=sharpLayer.width,h=sharpLayer.height,a=.095;
+   const source=new Uint8ClampedArray(pixels.data),dest=pixels.data,w=sharpLayer.width,h=sharpLayer.height,a=.18;
    for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){
     const i=(y*w+x)*4;
     for(let c=0;c<3;c++)dest[i+c]=Math.max(0,Math.min(255,source[i+c]*(1+4*a)-a*(source[i+c-4]+source[i+c+4]+source[i+c-w*4]+source[i+c+w*4])));
@@ -22,13 +22,48 @@ const Scenery=(()=>{
   }catch(err){ /* Keep the original image if image pixels are unavailable. */ }
   sharpReady=true;
  }
+ // Remove the south-east residence's front fence by borrowing texture from
+ // the illustrated yard (above it) and grassy clearing (below it). Unlike a
+ // rectangular dirt overlay, this soft local repair keeps the original scene.
+ // All sampling is performed once when the cached scenery is rebuilt.
+ function clearResidentFence(paint){
+  const sx=825,sy=734,w=309,h=109;
+  let pixels;
+  try{pixels=paint.getImageData(sx,sy,w,h);}catch{return;}
+  const before=new Uint8ClampedArray(pixels.data),dest=pixels.data;
+  const smooth=v=>Math.max(0,Math.min(1,v));
+  const noise=(x,y)=>{const v=Math.sin(x*127.1+y*311.7)*43758.5453;return v-Math.floor(v);};
+  const at=(x,y,c)=>before[((y-sy)*w+(x-sx))*4+c];
+  for(let y=sy;y<sy+h;y++){
+   for(let x=sx;x<sx+w;x++){
+    // Uneven boundaries follow the ground, avoiding a visible rectangular edge.
+    const top=758+3*Math.sin(x/26)+2*Math.sin(x/10);
+    const bottom=817+4*Math.sin(x/28)+2*Math.sin(x/12);
+    const left=835+4*Math.sin(y/17),right=1120+4*Math.sin(y/21);
+    const margin=Math.min(y-top,bottom-y,x-left,right-x);
+    if(margin<=0)continue;
+    const alpha=smooth(margin/9);
+    const t=smooth((y-top)/(bottom-top));
+    const hsh=noise(x,y);
+    const ox=Math.max(sx,Math.min(sx+w-1,x+Math.floor(hsh*5)-2));
+    const topY=Math.max(sy,Math.floor(top)-8-Math.floor(noise(x,11+y)*7));
+    const botY=Math.min(sy+h-1,Math.floor(bottom)+7+Math.floor(noise(x,33+y)*6));
+    const i=((y-sy)*w+(x-sx))*4;
+    for(let c=0;c<3;c++){
+     const recovered=at(ox,topY,c)*(1-t)+at(ox,botY,c)*t;
+     dest[i+c]=before[i+c]*(1-alpha)+(recovered+(hsh-.5)*4)*alpha;
+    }
+   }
+  }
+  paint.putImageData(pixels,sx,sy);
+ }
  // Keep the illustrated ground intact. Only open a narrow section of fence and
  // scatter a few cobbles at the four yards whose fences cross the approach.
  // Do NOT paint wide, round-ended roads over the finished village artwork.
  function paintEntrances(paint){
   if(!V.doorPaths)return;
   for(const door of V.doorPaths){
-   if(!door.gate)continue; // The other porches already have paths in the original illustration.
+   if(!door.gate||door.name==='Nhà dân')continue; // Resident front fence is fully removed above.
    const x=Math.round(door.gate.x/V.SCALE),y=Math.round(door.gate.y/V.SCALE);
    const width=door.name==='Khách điếm'||door.name==='Nhà dân'?18:16;
    const left=Math.round(x-width/2),top=y-8;
@@ -70,11 +105,12 @@ const Scenery=(()=>{
   const paint=layer.getContext('2d');paint.imageSmoothingEnabled=false;
   paint.filter=`brightness(${brightness}%) saturate(97%) contrast(106%)`;
   paint.drawImage(sharpLayer,0,0);paint.filter='none';
+  clearResidentFence(paint);
   paintEntrances(paint);
  }
  function setBrightness(value){const number=Number(value);if(!Number.isFinite(number))return;brightness=Math.max(60,Math.min(110,Math.round(number)));rebuild();try{localStorage.setItem('tutien-brightness',String(brightness));}catch{}}
  const loaded=new Promise(resolve=>{image.onload=()=>{rebuild();ready=true;resolve(true);};image.onerror=()=>{failed=true;resolve(false);};});
  image.src='assets/thon-khoi-nguyen.png';
- function ground(){if(ready){ctx.save();ctx.imageSmoothingEnabled=true;ctx.drawImage(layer,0,0,V.W,V.H);ctx.restore();return;}ctx.fillStyle='#243d34';ctx.fillRect(0,0,V.W,V.H);ctx.fillStyle='#dac899';ctx.textAlign='center';ctx.font='14px sans-serif';ctx.fillText(failed?'Không tải được bản đồ. Hãy tải lại trang.':'Đang mở Thôn Khởi Nguyên…',V.spawn.x,V.spawn.y);}
+ function ground(){if(ready){ctx.save();ctx.imageSmoothingEnabled=false;ctx.drawImage(layer,0,0,V.W,V.H);ctx.restore();return;}ctx.fillStyle='#243d34';ctx.fillRect(0,0,V.W,V.H);ctx.fillStyle='#dac899';ctx.textAlign='center';ctx.font='14px sans-serif';ctx.fillText(failed?'Không tải được bản đồ. Hãy tải lại trang.':'Đang mở Thôn Khởi Nguyên…',V.spawn.x,V.spawn.y);}
  return {ground,loaded,setBrightness,get brightness(){return brightness;},get ready(){return ready;},image};
 })();
