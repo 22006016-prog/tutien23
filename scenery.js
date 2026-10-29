@@ -2,55 +2,28 @@
    Colour correction is cached, so adjusting eye comfort costs no per-frame filter. */
 const Scenery=(()=>{
  const image=new Image(),overviewImage=new Image(),layer=document.createElement('canvas'),sharpLayer=document.createElement('canvas');
- let sharpReady=false;
+ let sharpReady=false,cacheReady=false,lastError='';
  let ready=false,failed=false,brightness=92;
  try{const saved=Number(localStorage.getItem('tutien-brightness'));if(Number.isFinite(saved)&&saved>=60&&saved<=110)brightness=saved;}catch{}
  // Build the map ONCE at the real playable-world resolution.
  // The old pipeline sharpened 1536x1024 pixels, then enlarged them 1.5x
  // every frame; that made tiny roofs, fences and paving details look soft.
  function prepareSharpArt(){
-  if(sharpReady||!image.naturalWidth)return;
+  if(cacheReady||!image.naturalWidth)return;
   const source=document.createElement('canvas');
   source.width=image.naturalWidth;source.height=image.naturalHeight;
-  const art=source.getContext('2d',{willReadFrequently:true});
+  const art=source.getContext('2d');
   art.drawImage(image,0,0);
-  // Preserve the illustrated world, remove only the four front fence runs,
-  // then transplant the village-head architecture onto the two northern cottages.
-  openFourFrontYards(art);
-  upgradeNorthernHalls(art);
-  // The overview must use the same edited art as the playable canvas.
-  overviewImage.src=source.toDataURL('image/png');
-
+  // A damaged house or fence edit must not block the game from loading.
+  try{openFourFrontYards(art);}catch(error){lastError='Hàng rào: '+error.message;}
+  try{upgradeNorthernHalls(art);}catch(error){lastError='Nhà mới: '+error.message;}
+  try{overviewImage.src=source.toDataURL('image/webp',.88);}catch(error){}
   sharpLayer.width=V.W;sharpLayer.height=V.H;
-  const output=sharpLayer.getContext('2d',{willReadFrequently:true});
+  const output=sharpLayer.getContext('2d');
   output.imageSmoothingEnabled=true;
   output.imageSmoothingQuality='high';
-  output.drawImage(source,0,0,source.width,source.height,0,0,V.W,V.H);
-  // Edge-adaptive sharpening at 2304x1536 (not at the smaller source
-  // resolution). The threshold prevents amplification of flat-area noise.
-  try{
-   const pixels=output.getImageData(0,0,V.W,V.H);
-   const data=pixels.data,original=new Uint8ClampedArray(data);
-   const row=V.W*4;
-   for(let y=1;y<V.H-1;y++){
-    for(let x=1;x<V.W-1;x++){
-     const i=y*row+x*4;
-     for(let c=0;c<3;c++){
-      const k=i+c,center=original[k];
-      const neighbor=(original[k-4]+original[k+4]+original[k-row]+original[k+row])*.25;
-      const diff=center-neighbor;
-      if(Math.abs(diff)>3){
-       const correction=Math.max(-31,Math.min(31,diff*1.45));
-       data[k]=Math.max(0,Math.min(255,center+correction));
-      }
-     }
-    }
-   }
-   output.putImageData(pixels,0,0);
-  }catch(err){
-   // Keep the high-resolution image if canvas pixel access is unsupported.
-  }
-  sharpReady=true;
+  output.drawImage(source,0,0,V.W,V.H);
+  cacheReady=true;sharpReady=true;
  }
  // Remove only the FRONT fences of the four shops/inns highlighted in yellow.
  // Each narrow polygonal ribbon is filled with genuine dirt/grass pixels
@@ -139,19 +112,42 @@ const Scenery=(()=>{
  }
  function rebuild(){
   if(!image.naturalWidth)return;
-  prepareSharpArt();
-  // No additional 1.5x enlargement in the render loop: this cache is
-  // precisely the same size as the game world (2304x1536).
-  layer.width=V.W;layer.height=V.H;
-  const paint=layer.getContext('2d');
-  paint.imageSmoothingEnabled=false;
-  paint.filter=`brightness(${brightness}%) saturate(101%) contrast(108%)`;
-  paint.drawImage(sharpLayer,0,0);
-  paint.filter='none';
+  try{
+   prepareSharpArt();
+   if(!cacheReady)return;
+   layer.width=V.W;layer.height=V.H;
+   const paint=layer.getContext('2d');
+   paint.imageSmoothingEnabled=true;
+   paint.filter=`brightness(${brightness}%) saturate(101%) contrast(104%)`;
+   paint.drawImage(sharpLayer,0,0);
+   paint.filter='none';
+  }catch(error){
+   lastError='Bản đồ nền: '+(error.message||String(error));
+   cacheReady=false;
+  }
  }
  function setBrightness(value){const number=Number(value);if(!Number.isFinite(number))return;brightness=Math.max(60,Math.min(110,Math.round(number)));rebuild();try{localStorage.setItem('tutien-brightness',String(brightness));}catch{}}
- const loaded=new Promise(resolve=>{image.onload=()=>{rebuild();ready=true;resolve(true);};image.onerror=()=>{failed=true;resolve(false);};});
+ const loaded=new Promise(resolve=>{
+  image.onload=()=>{
+   ready=true;resolve(true);
+   setTimeout(()=>{
+    rebuild();
+    const overview=document.querySelector('#overview-art');
+    if(overview&&overviewImage.src)overview.src=overviewImage.src;
+   },30);
+  };
+  image.onerror=()=>{failed=true;resolve(false);};
+ });
  image.src='assets/thon-khoi-nguyen.png';
- function ground(){if(ready){ctx.save();ctx.imageSmoothingEnabled=false;ctx.drawImage(layer,0,0,V.W,V.H);ctx.restore();return;}ctx.fillStyle='#243d34';ctx.fillRect(0,0,V.W,V.H);ctx.fillStyle='#dac899';ctx.textAlign='center';ctx.font='14px sans-serif';ctx.fillText(failed?'Không tải được bản đồ. Hãy tải lại trang.':'Đang mở Thôn Khởi Nguyên…',V.spawn.x,V.spawn.y);}
- return {ground,loaded,setBrightness,get brightness(){return brightness;},get ready(){return ready;},get image(){return overviewImage.src?overviewImage:image;}};
+ function ground(){
+  if(ready){
+   ctx.save();ctx.imageSmoothingEnabled=true;
+   ctx.drawImage(cacheReady?layer:image,0,0,V.W,V.H);
+   ctx.restore();return;
+  }
+  ctx.fillStyle='#243d34';ctx.fillRect(0,0,V.W,V.H);
+  ctx.fillStyle='#dac899';ctx.textAlign='center';ctx.font='14px sans-serif';
+  ctx.fillText(failed?'Không tải được ảnh nền — kiểm tra kết nối.':'Đang mở Thôn Khởi Nguyên…',V.spawn.x,V.spawn.y);
+ }
+ return {ground,loaded,setBrightness,get brightness(){return brightness;},get ready(){return ready;},get image(){return overviewImage.src?overviewImage:image;},get lastError(){return lastError;}};
 })();
