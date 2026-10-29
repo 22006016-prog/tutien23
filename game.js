@@ -52,7 +52,7 @@ $('#overview-art').src=Scenery.image.src;
 $('#map-peek').onclick=()=>toggleMap(true);$('#open-map').onclick=()=>toggleMap(true);$('#close-map').onclick=()=>toggleMap(false);
 $('#map-overview').onclick=e=>{if(e.target===$('#map-overview'))toggleMap(false);};
 window.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#map-overview').hidden){e.preventDefault();toggleMap(false);}});
-Scenery.loaded.then(ok=>{if(!ok)toast('Không tải được ảnh map — hãy tải lại trang');});
+Scenery.loaded.then(ok=>{if(ok){$('#overview-art').src=Scenery.image.src;}else toast('Không tải được ảnh map — hãy tải lại trang');});
 
 function updateBrightnessControl(){const value=Scenery.brightness;$('#brightness').value=value;$('#brightness-value').textContent=value+'%';$('#overview-art').style.filter=`brightness(${value}%) saturate(97%) contrast(106%)`;}
 $('#brightness').addEventListener('input',e=>{keys.clear();Scenery.setBrightness(e.target.value);updateBrightnessControl();});
