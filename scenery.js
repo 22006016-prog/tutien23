@@ -1,7 +1,7 @@
 /* Bundled village artwork. Navigation in world.js follows this exact scene.
    Colour correction is cached, so adjusting eye comfort costs no per-frame filter. */
 const Scenery=(()=>{
- const image=new Image(),layer=document.createElement('canvas'),sharpLayer=document.createElement('canvas');
+ const image=new Image(),overviewImage=new Image(),layer=document.createElement('canvas'),sharpLayer=document.createElement('canvas');
  let sharpReady=false;
  let ready=false,failed=false,brightness=92;
  try{const saved=Number(localStorage.getItem('tutien-brightness'));if(Number.isFinite(saved)&&saved>=60&&saved<=110)brightness=saved;}catch{}
@@ -14,8 +14,12 @@ const Scenery=(()=>{
   source.width=image.naturalWidth;source.height=image.naturalHeight;
   const art=source.getContext('2d',{willReadFrequently:true});
   art.drawImage(image,0,0);
-  clearResidentFence(art); // retain the open resident NPC courtyard
-  paintEntrances(art);     // retain the small gates at other houses
+  // Preserve the illustrated world, remove only the four front fence runs,
+  // then transplant the village-head architecture onto the two northern cottages.
+  openFourFrontYards(art);
+  upgradeNorthernHalls(art);
+  // The overview must use the same edited art as the playable canvas.
+  overviewImage.src=source.toDataURL('image/png');
 
   sharpLayer.width=V.W;sharpLayer.height=V.H;
   const output=sharpLayer.getContext('2d',{willReadFrequently:true});
@@ -48,81 +52,89 @@ const Scenery=(()=>{
   }
   sharpReady=true;
  }
- // Remove the south-east residence's front fence by borrowing texture from
- // the illustrated yard (above it) and grassy clearing (below it). Unlike a
- // rectangular dirt overlay, this soft local repair keeps the original scene.
- // All sampling is performed once when the cached scenery is rebuilt.
- function clearResidentFence(paint){
-  // Only the HORIZONTAL front fence of the south-east residence is removed.
-  // The side fences, rear fence, roof, gardens and houses are not modified.
-  // Coordinates are in the untouched 1536x1024 Map B illustration.
-  const x0=834,y0=744,w=292,h=81;
-  let pixels;
-  try{pixels=paint.getImageData(x0,y0,w,h);}catch{return;}
-  const original=new Uint8ClampedArray(pixels.data),result=pixels.data;
+ // Remove only the FRONT fences of the four shops/inns highlighted in yellow.
+ // Each narrow polygonal ribbon is filled with genuine dirt/grass pixels
+ // sampled from elsewhere in the same image, not a solid color or wide oval.
+ function openFourFrontYards(paint){
+  const zones=[
+   {name:'Dược đường',p:[[174,540],[210,552],[294,550],[380,541],[454,516]],r:23,tex:[674,546]},
+   {name:'Tiệm rèn',p:[[933,490],[980,514],[1057,514],[1134,506],[1192,485]],r:23,tex:[763,555]},
+   {name:'Khách điếm',p:[[288,761],[332,782],[432,788],[545,770]],r:23,tex:[635,741]},
+   {name:'Nhà dân',p:[[848,780],[914,796],[1034,799],[1127,781]],r:24,tex:[688,827]}
+  ];
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-  const mirror=(v,span)=>{const n=((v%(span*2))+(span*2))%(span*2);return n<=span?n:span*2-n;};
-  // A clean, unoccupied patch of grass just SOUTH of the front fence.
-  // We reflect/mix its pixels instead of drawing a uniform beige shape.
-  const sample=document.createElement('canvas');
-  sample.width=68;sample.height=39;
-  const sampleCtx=sample.getContext('2d',{willReadFrequently:true});
-  sampleCtx.drawImage(image,998,822,68,39,0,0,68,39);
-  const grass=sampleCtx.getImageData(0,0,68,39).data;
-  for(let y=y0;y<y0+h;y++)for(let x=x0;x<x0+w;x++){
-    const top=754+2.2*Math.sin(x/39)+Math.sin(x/13);
-    const bottom=819+2*Math.sin(x/37);
-    // Leave the two side fences and corner posts intact.
-    const left=841+2*Math.sin(y/23),right=1117+3*Math.sin(y/22);
-    const edge=Math.min(y-top,bottom-y,x-left,right-x);
-    if(edge<=0)continue;
-    const a=clamp(edge/8,0,1);
-    const sx=clamp(Math.round(mirror((x-841)*.82+y*.09,66)),0,67);
-    const sy=clamp(Math.round(mirror((y-top)*.6+x*.045,37)),0,38);
-    const dst=((y-y0)*w+x-x0)*4,src=(sy*68+sx)*4;
-    for(let c=0;c<3;c++)result[dst+c]=original[dst+c]*(1-a)+grass[src+c]*a;
-  }
-  paint.putImageData(pixels,x0,y0);
- }
- // Keep the illustrated ground intact. Only open a narrow section of fence and
- // scatter a few cobbles at the four yards whose fences cross the approach.
- // Do NOT paint wide, round-ended roads over the finished village artwork.
- function paintEntrances(paint){
-  if(!V.doorPaths)return;
-  for(const door of V.doorPaths){
-   if(!door.gate||door.name==='Nhà dân')continue; // Resident front fence is fully removed above.
-   const x=Math.round(door.gate.x/V.SCALE),y=Math.round(door.gate.y/V.SCALE);
-   const width=door.name==='Khách điếm'||door.name==='Nhà dân'?18:16;
-   const left=Math.round(x-width/2),top=y-8;
-   paint.save();
-   // Narrow dirt gap in the fence, using pixels from the EXISTING central road.
-   // A clipped rectangle, not a stroked line, prevents oval/beige blobs.
-   paint.beginPath();
-   paint.moveTo(left+2,top);paint.lineTo(left+width-2,top);
-   paint.lineTo(left+width,top+4);paint.lineTo(left+width-1,top+14);
-   paint.lineTo(left+width-4,top+17);paint.lineTo(left+2,top+17);
-   paint.lineTo(left,top+12);paint.lineTo(left,top+3);paint.closePath();
-   paint.clip();
-   paint.globalAlpha=1;
-   paint.drawImage(image,690,545,width,18,left,top,width,18);
-   paint.restore();
-   // Two fence posts mark a clear gap without blanketing flowers or the nearby grass.
-   paint.save();paint.fillStyle='#594631';
-   paint.fillRect(left-3,top-5,3,16);
-   paint.fillRect(left+width,top-5,3,16);
-   paint.fillStyle='#977656';
-   paint.fillRect(left-2,top-5,1,13);
-   paint.fillRect(left+width+1,top-5,1,13);
-   // Stepping stones are intentionally tiny and irregular (4-7px).
-   const phase=door.name==='Nhà dân'?2:0;
-   for(let i=0;i<3;i++){
-    const sy=y+13+i*8;
-    const sx=x+(i%2?4:-3)+phase;
-    paint.fillStyle='#645d4d';paint.fillRect(sx-3,sy-1,8,5);
-    paint.fillStyle=i%2?'#baae93':'#a79e85';paint.fillRect(sx-3,sy-2,7,4);
-    paint.fillStyle='#ded0b1';paint.fillRect(sx-2,sy-2,4,1);
+  const distance=(x,y,a,b)=>{
+   const dx=b[0]-a[0],dy=b[1]-a[1],len=dx*dx+dy*dy;
+   const t=len?clamp(((x-a[0])*dx+(y-a[1])*dy)/len,0,1):0;
+   return Math.hypot(x-a[0]-dx*t,y-a[1]-dy*t);
+  };
+  for(const zone of zones){
+   const x0=Math.max(0,Math.floor(Math.min(...zone.p.map(q=>q[0]))-zone.r-3));
+   const y0=Math.max(0,Math.floor(Math.min(...zone.p.map(q=>q[1]))-zone.r-3));
+   const x1=Math.min(image.naturalWidth,Math.ceil(Math.max(...zone.p.map(q=>q[0]))+zone.r+4));
+   const y1=Math.min(image.naturalHeight,Math.ceil(Math.max(...zone.p.map(q=>q[1]))+zone.r+4));
+   const w=x1-x0,h=y1-y0,textureSize=88;
+   const texCanvas=document.createElement('canvas');
+   texCanvas.width=textureSize;texCanvas.height=textureSize;
+   const tc=texCanvas.getContext('2d',{willReadFrequently:true});
+   tc.drawImage(image,zone.tex[0],zone.tex[1],textureSize,textureSize,0,0,textureSize,textureSize);
+   let region,texture;
+   try{
+    region=paint.getImageData(x0,y0,w,h);
+    texture=tc.getImageData(0,0,textureSize,textureSize).data;
+   }catch{continue;}
+   const original=new Uint8ClampedArray(region.data),out=region.data;
+   for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++){
+    let d=1e6;
+    for(let i=1;i<zone.p.length;i++)d=Math.min(d,distance(x,y,zone.p[i-1],zone.p[i]));
+    const alpha=clamp((zone.r-d)/7,0,1);
+    if(alpha<=0)continue;
+    // Gentle texture offsets break up repetitive tiles and retain fine detail.
+    const sx=((Math.floor((x-x0)*.72+(y-y0)*.11)%textureSize)+textureSize)%textureSize;
+    const sy=((Math.floor((y-y0)*.62+(x-x0)*.07)%textureSize)+textureSize)%textureSize;
+    const dest=((y-y0)*w+(x-x0))*4,src=(sy*textureSize+sx)*4;
+    for(let c=0;c<3;c++)out[dest+c]=original[dest+c]*(1-alpha)+texture[src+c]*alpha;
    }
-   paint.restore();
+   paint.putImageData(region,x0,y0);
+  }
+ }
+ // Copy architecture from the ORIGINAL Trưởng thôn house, matching its roofs,
+ // lanterns and stairs. Both houses use the same visual language without
+ // importing new, mismatched graphics.
+ function upgradeNorthernHalls(paint){
+  const halls=[
+   {x:164,y:43,w:216,h:117,fill:[401,255,135,94]},
+   {x:984,y:38,w:259,h:116,fill:[1202,255,135,94]}
+  ];
+  for(const hall of halls){
+   const {x,y,w,h,fill}=hall;
+   // Conceal the small old cottage using the surrounding painted landscape.
+   const backdrop=document.createElement('canvas');
+   backdrop.width=w+8;backdrop.height=h+8;
+   const bc=backdrop.getContext('2d');
+   bc.imageSmoothingEnabled=true;
+   bc.drawImage(image,...fill,0,0,w+8,h+8);
+   const fade=document.createElement('canvas');
+   fade.width=w+8;fade.height=h+8;
+   const fc=fade.getContext('2d');
+   fc.fillStyle='#fff';fc.filter='blur(7px)';fc.fillRect(8,8,w-8,h-8);
+   bc.globalCompositeOperation='destination-in';bc.drawImage(fade,0,0);
+   bc.globalCompositeOperation='source-over';
+   paint.drawImage(backdrop,x-4,y-4);
+
+   // Original main hall: curved dark tiles, lit windows, stone staircase.
+   const house=document.createElement('canvas');house.width=w;house.height=h;
+   const hc=house.getContext('2d');
+   hc.imageSmoothingEnabled=true;hc.imageSmoothingQuality='high';
+   hc.drawImage(image,510,77,370,152,0,0,w,h);
+   const mask=document.createElement('canvas');mask.width=w;mask.height=h;
+   const mc=mask.getContext('2d');mc.fillStyle='white';mc.filter='blur(2.5px)';
+   const p=[[0,.53],[.04,.42],[.23,.38],[.33,.18],[.66,.18],[.74,.4],[.94,.42],[1,.54],[1,.88],[.67,.9],[.58,1],[.38,1],[.3,.9],[0,.89]];
+   mc.beginPath();p.forEach(([xx,yy],i)=>i?mc.lineTo(xx*w,yy*h):mc.moveTo(xx*w,yy*h));
+   mc.closePath();mc.fill();
+   hc.globalCompositeOperation='destination-in';hc.drawImage(mask,0,0);
+   hc.globalCompositeOperation='source-over';
+   paint.drawImage(house,x,y);
   }
  }
  function rebuild(){
@@ -141,5 +153,5 @@ const Scenery=(()=>{
  const loaded=new Promise(resolve=>{image.onload=()=>{rebuild();ready=true;resolve(true);};image.onerror=()=>{failed=true;resolve(false);};});
  image.src='assets/thon-khoi-nguyen.png';
  function ground(){if(ready){ctx.save();ctx.imageSmoothingEnabled=false;ctx.drawImage(layer,0,0,V.W,V.H);ctx.restore();return;}ctx.fillStyle='#243d34';ctx.fillRect(0,0,V.W,V.H);ctx.fillStyle='#dac899';ctx.textAlign='center';ctx.font='14px sans-serif';ctx.fillText(failed?'Không tải được bản đồ. Hãy tải lại trang.':'Đang mở Thôn Khởi Nguyên…',V.spawn.x,V.spawn.y);}
- return {ground,loaded,setBrightness,get brightness(){return brightness;},get ready(){return ready;},image};
+ return {ground,loaded,setBrightness,get brightness(){return brightness;},get ready(){return ready;},get image(){return overviewImage.src?overviewImage:image;}};
 })();
