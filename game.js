@@ -47,12 +47,21 @@ window.addEventListener('keydown',e=>{if(e.repeat||e.target instanceof HTMLButto
 function respawn(){player.x=V.spawn.x;player.y=V.spawn.y;keys.clear();joy.x=joy.y=0;meditating=false;effect=null;dialogOpen=false;$('#dialog').hidden=true;save();toast('Đã trở về Linh Thạch — điểm khởi đầu / hồi sinh');}
 $('#return-spawn').onclick=()=>{respawn();$('#menu').hidden=true;$('#menu-toggle').setAttribute('aria-expanded','false');};
 
-function toggleMap(open){$('#map-overview').hidden=!open;keys.clear();joy.x=joy.y=0;walking=false;$('#menu').hidden=true;$('#menu-toggle').setAttribute('aria-expanded','false');$('#map-marker').style.left=(player.x/V.W*100)+'%';$('#map-marker').style.top=(player.y/V.H*100)+'%';if(open)$('#close-map').focus();else canvas.focus();}
+function syncEditedOverview(){
+ const edited=Scenery.image;
+ if(edited&&edited.src)$('#overview-art').src=edited.src;
+ $('#overview-art').dataset.mapEdited=Scenery.editFinished&&edited.src!== 'assets/thon-khoi-nguyen.png'?'yes':'no';
+}
+function toggleMap(open){if(open)syncEditedOverview();$('#map-overview').hidden=!open;keys.clear();joy.x=joy.y=0;walking=false;$('#menu').hidden=true;$('#menu-toggle').setAttribute('aria-expanded','false');$('#map-marker').style.left=(player.x/V.W*100)+'%';$('#map-marker').style.top=(player.y/V.H*100)+'%';if(open)$('#close-map').focus();else canvas.focus();}
 $('#overview-art').src=Scenery.image.src;
 $('#map-peek').onclick=()=>toggleMap(true);$('#open-map').onclick=()=>toggleMap(true);$('#close-map').onclick=()=>toggleMap(false);
 $('#map-overview').onclick=e=>{if(e.target===$('#map-overview'))toggleMap(false);};
 window.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#map-overview').hidden){e.preventDefault();toggleMap(false);}});
-Scenery.loaded.then(ok=>{if(ok){$('#overview-art').src=Scenery.image.src;}else toast('Không tải được ảnh map — hãy tải lại trang');});
+Scenery.loaded.then(ok=>{if(ok)syncEditedOverview();else toast('Không tải được ảnh map — hãy tải lại trang');});
+Scenery.edited.then(result=>{
+ syncEditedOverview();
+ if(!result.ok)toast('Ảnh map gốc vẫn chơi được; phần sửa cảnh gặp lỗi.');
+});
 
 function updateBrightnessControl(){const value=Scenery.brightness;$('#brightness').value=value;$('#brightness-value').textContent=value+'%';$('#overview-art').style.filter=`brightness(${value}%) saturate(97%) contrast(106%)`;}
 $('#brightness').addEventListener('input',e=>{keys.clear();Scenery.setBrightness(e.target.value);updateBrightnessControl();});
