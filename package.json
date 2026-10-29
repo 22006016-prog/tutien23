@@ -1,6 +1,13 @@
 {
-  "name": "tu-tien-thanh-khe",
-  "version": "0.6.0",
+  "name": "tu-tien-thon-khoi-nguyen",
+  "version": "0.8.0",
   "private": true,
-  "scripts": { "start": "python3 -m http.server 8080 --bind 127.0.0.1", "test": "node tests/world.test.cjs" }
+  "scripts": {
+    "start": "python3 -m http.server 8080 --bind 127.0.0.1",
+    "test": "node tests/world.test.cjs",
+    "test:browser": "node tools/check-map.cjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.61.1"
+  }
 }

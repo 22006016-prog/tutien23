@@ -1,7 +1,7 @@
 /* Coordinates are authored against the bundled 1536×1024 artwork, then
    expanded 1.5× into a 2304×1536 playable world. Road widths follow the new art. */
 (function(root){
- const TILE=32,SCALE=1.5,W=2304,H=1536,name='Thôn Khởi Nguyên',version=6;
+ const TILE=32,SCALE=1.5,W=2304,H=1536,name='Thôn Khởi Nguyên',version=7;
  const point=([x,y])=>[x*SCALE,y*SCALE];
  const position=(x,y)=>({x:x*SCALE,y:y*SCALE});
  const spawn=position(696,474),elder=position(680,269);
