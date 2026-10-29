@@ -2,7 +2,8 @@
    Colour correction is cached, so adjusting eye comfort costs no per-frame filter. */
 const Scenery=(()=>{
  const image=new Image(),overviewImage=new Image(),layer=document.createElement('canvas'),sharpLayer=document.createElement('canvas');
- let sharpReady=false,cacheReady=false,lastError='';
+ let sharpReady=false,cacheReady=false,lastError='',editFinished=false;
+ let resolveEdited;const edited=new Promise(resolve=>{resolveEdited=resolve;});
  let ready=false,failed=false,brightness=92;
  try{const saved=Number(localStorage.getItem('tutien-brightness'));if(Number.isFinite(saved)&&saved>=60&&saved<=110)brightness=saved;}catch{}
  // Build the map ONCE at the real playable-world resolution.
@@ -120,9 +121,19 @@ const Scenery=(()=>{
   image.onload=()=>{
    ready=true;resolve(true);
    setTimeout(()=>{
-    rebuild();
-    const overview=document.querySelector('#overview-art');
-    if(overview&&overviewImage.src)overview.src=overviewImage.src;
+    try{
+     rebuild();
+    }catch(error){
+     lastError='Lỗi ghép bản đồ: '+(error.message||String(error));
+    }finally{
+     editFinished=true;
+     const overview=document.querySelector('#overview-art');
+     if(overview){
+      overview.src=cacheReady&&overviewImage.src?overviewImage.src:image.src;
+      overview.dataset.mapEdited=cacheReady&&overviewImage.src?'yes':'no';
+     }
+     resolveEdited({ok:!!cacheReady,error:lastError});
+    }
    },30);
   };
   image.onerror=()=>{failed=true;resolve(false);};
@@ -138,5 +149,5 @@ const Scenery=(()=>{
   ctx.fillStyle='#dac899';ctx.textAlign='center';ctx.font='14px sans-serif';
   ctx.fillText(failed?'Không tải được ảnh nền — kiểm tra kết nối.':'Đang mở Thôn Khởi Nguyên…',V.spawn.x,V.spawn.y);
  }
- return {ground,loaded,setBrightness,get brightness(){return brightness;},get ready(){return ready;},get image(){return overviewImage.src?overviewImage:image;},get lastError(){return lastError;}};
+ return {ground,loaded,edited,setBrightness,get brightness(){return brightness;},get ready(){return ready;},get editFinished(){return editFinished;},get image(){return cacheReady&&overviewImage.src?overviewImage:image;},get lastError(){return lastError;}};
 })();
