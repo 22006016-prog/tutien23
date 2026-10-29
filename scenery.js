@@ -29,44 +29,41 @@ const Scenery=(()=>{
  // Each narrow polygonal ribbon is filled with genuine dirt/grass pixels
  // sampled from elsewhere in the same image, not a solid color or wide oval.
  function openFourFrontYards(paint){
+  // Wider, visually verifiable clearings. Previously the narrow ribbons left
+  // the stone fence and vegetable beds visible in the map overview.
+  // Authoring coordinates use the original 1536x1024 image.
   const zones=[
-   {name:'Dược đường',p:[[174,540],[210,552],[294,550],[380,541],[454,516]],r:23,tex:[674,546]},
-   {name:'Tiệm rèn',p:[[933,490],[980,514],[1057,514],[1134,506],[1192,485]],r:23,tex:[763,555]},
-   {name:'Khách điếm',p:[[288,761],[332,782],[432,788],[545,770]],r:23,tex:[635,741]},
-   {name:'Nhà dân',p:[[848,780],[914,796],[1034,799],[1127,781]],r:24,tex:[688,827]}
+   {name:'Dược đường',bounds:[150,483,466,572]},
+   {name:'Tiệm rèn',bounds:[926,446,1211,528]},
+   {name:'Khách điếm',bounds:[270,731,616,818]},
+   {name:'Nhà dân',bounds:[829,751,1153,832]}
   ];
-  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-  const distance=(x,y,a,b)=>{
-   const dx=b[0]-a[0],dy=b[1]-a[1],len=dx*dx+dy*dy;
-   const t=len?clamp(((x-a[0])*dx+(y-a[1])*dy)/len,0,1):0;
-   return Math.hypot(x-a[0]-dx*t,y-a[1]-dy*t);
-  };
+  const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+  // Real, unobstructed dirt texture from the central village avenue.
+  // Avoid samples from houses, the southern gate and river.
+  const tw=86,th=54,patch=document.createElement('canvas');
+  patch.width=tw;patch.height=th;
+  const pc=patch.getContext('2d',{willReadFrequently:true});
+  pc.drawImage(image,635,332,tw,th,0,0,tw,th);
+  let texture;
+  try{texture=pc.getImageData(0,0,tw,th).data;}catch{return;}
   for(const zone of zones){
-   const x0=Math.max(0,Math.floor(Math.min(...zone.p.map(q=>q[0]))-zone.r-3));
-   const y0=Math.max(0,Math.floor(Math.min(...zone.p.map(q=>q[1]))-zone.r-3));
-   const x1=Math.min(image.naturalWidth,Math.ceil(Math.max(...zone.p.map(q=>q[0]))+zone.r+4));
-   const y1=Math.min(image.naturalHeight,Math.ceil(Math.max(...zone.p.map(q=>q[1]))+zone.r+4));
-   const w=x1-x0,h=y1-y0,textureSize=88;
-   const texCanvas=document.createElement('canvas');
-   texCanvas.width=textureSize;texCanvas.height=textureSize;
-   const tc=texCanvas.getContext('2d',{willReadFrequently:true});
-   tc.drawImage(image,zone.tex[0],zone.tex[1],textureSize,textureSize,0,0,textureSize,textureSize);
-   let region,texture;
-   try{
-    region=paint.getImageData(x0,y0,w,h);
-    texture=tc.getImageData(0,0,textureSize,textureSize).data;
-   }catch{continue;}
+   const [x0,y0,x1,y1]=zone.bounds,w=x1-x0,h=y1-y0;
+   let region;
+   try{region=paint.getImageData(x0,y0,w,h);}catch{continue;}
    const original=new Uint8ClampedArray(region.data),out=region.data;
    for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++){
-    let d=1e6;
-    for(let i=1;i<zone.p.length;i++)d=Math.min(d,distance(x,y,zone.p[i-1],zone.p[i]));
-    const alpha=clamp((zone.r-d)/7,0,1);
-    if(alpha<=0)continue;
-    // Gentle texture offsets break up repetitive tiles and retain fine detail.
-    const sx=((Math.floor((x-x0)*.72+(y-y0)*.11)%textureSize)+textureSize)%textureSize;
-    const sy=((Math.floor((y-y0)*.62+(x-x0)*.07)%textureSize)+textureSize)%textureSize;
-    const dest=((y-y0)*w+(x-x0))*4,src=(sy*textureSize+sx)*4;
-    for(let c=0;c<3;c++)out[dest+c]=original[dest+c]*(1-alpha)+texture[src+c]*alpha;
+    // Feathery, uneven ground edges rather than a flat rectangular strip.
+    const top=y0+2*Math.sin(x/27)+Math.sin(x/10);
+    const bottom=y1+2*Math.sin(x/31);
+    const left=x0+3*Math.sin(y/27),right=x1+3*Math.sin(y/28);
+    const edge=Math.min(y-top,bottom-y,x-left,right-x);
+    if(edge<=0)continue;
+    const a=clamp(edge/11,0,1);
+    const tx=((Math.floor((x-x0)*.78+y*.13)%tw)+tw)%tw;
+    const ty=((Math.floor((y-y0)*.74+x*.07)%th)+th)%th;
+    const dst=((y-y0)*w+x-x0)*4,from=(ty*tw+tx)*4;
+    for(let c=0;c<3;c++)out[dst+c]=original[dst+c]*(1-a)+texture[from+c]*a;
    }
    paint.putImageData(region,x0,y0);
   }
@@ -75,39 +72,31 @@ const Scenery=(()=>{
  // lanterns and stairs. Both houses use the same visual language without
  // importing new, mismatched graphics.
  function upgradeNorthernHalls(paint){
+  // Copy the larger multi-roofed main hall, including its tiled roof,
+  // pillars, lanterns and stone steps, rather than keeping tiny cottages.
   const halls=[
-   {x:164,y:43,w:216,h:117,fill:[401,255,135,94]},
-   {x:984,y:38,w:259,h:116,fill:[1202,255,135,94]}
+   {x:161,y:37,w:242,h:156},
+   {x:979,y:33,w:279,h:163}
   ];
-  for(const hall of halls){
-   const {x,y,w,h,fill}=hall;
-   // Conceal the small old cottage using the surrounding painted landscape.
-   const backdrop=document.createElement('canvas');
-   backdrop.width=w+8;backdrop.height=h+8;
-   const bc=backdrop.getContext('2d');
-   bc.imageSmoothingEnabled=true;
-   bc.drawImage(image,...fill,0,0,w+8,h+8);
-   const fade=document.createElement('canvas');
-   fade.width=w+8;fade.height=h+8;
-   const fc=fade.getContext('2d');
-   fc.fillStyle='#fff';fc.filter='blur(7px)';fc.fillRect(8,8,w-8,h-8);
-   bc.globalCompositeOperation='destination-in';bc.drawImage(fade,0,0);
-   bc.globalCompositeOperation='source-over';
-   paint.drawImage(backdrop,x-4,y-4);
-
-   // Original main hall: curved dark tiles, lit windows, stone staircase.
-   const house=document.createElement('canvas');house.width=w;house.height=h;
-   const hc=house.getContext('2d');
-   hc.imageSmoothingEnabled=true;hc.imageSmoothingQuality='high';
-   hc.drawImage(image,510,77,370,152,0,0,w,h);
-   const mask=document.createElement('canvas');mask.width=w;mask.height=h;
-   const mc=mask.getContext('2d');mc.fillStyle='white';mc.filter='blur(2.5px)';
-   const p=[[0,.53],[.04,.42],[.23,.38],[.33,.18],[.66,.18],[.74,.4],[.94,.42],[1,.54],[1,.88],[.67,.9],[.58,1],[.38,1],[.3,.9],[0,.89]];
-   mc.beginPath();p.forEach(([xx,yy],i)=>i?mc.lineTo(xx*w,yy*h):mc.moveTo(xx*w,yy*h));
-   mc.closePath();mc.fill();
-   hc.globalCompositeOperation='destination-in';hc.drawImage(mask,0,0);
-   hc.globalCompositeOperation='source-over';
-   paint.drawImage(house,x,y);
+  for(const h of halls){
+   const cut=document.createElement('canvas');cut.width=h.w;cut.height=h.h;
+   const hc=cut.getContext('2d');hc.imageSmoothingEnabled=true;
+   hc.imageSmoothingQuality='high';
+   hc.drawImage(image,496,76,396,160,0,0,h.w,h.h);
+   // Feather the outline where the new estate meets its surrounding trees.
+   const mask=document.createElement('canvas');mask.width=h.w;mask.height=h.h;
+   const mc=mask.getContext('2d');
+   mc.fillStyle='#fff';mc.filter='blur(5px)';
+   mc.beginPath();
+   mc.moveTo(8,38);mc.lineTo(h.w*.15,33);mc.lineTo(h.w*.27,11);
+   mc.lineTo(h.w*.72,11);mc.lineTo(h.w*.85,32);
+   mc.lineTo(h.w-8,38);mc.lineTo(h.w-8,h.h-16);
+   mc.lineTo(h.w*.75,h.h-12);mc.lineTo(h.w*.59,h.h-2);
+   mc.lineTo(h.w*.41,h.h-2);mc.lineTo(h.w*.25,h.h-12);
+   mc.lineTo(8,h.h-16);mc.closePath();mc.fill();
+   hc.globalCompositeOperation='destination-in';
+   hc.drawImage(mask,0,0);hc.globalCompositeOperation='source-over';
+   paint.drawImage(cut,h.x,h.y);
   }
  }
  function rebuild(){
