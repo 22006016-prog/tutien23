@@ -49,3 +49,15 @@ Bốn địa điểm khám phá: nhà trưởng thôn, dược đường, tiệm
 - Giữ chức năng gốc: NPC trưởng thôn, joystick, kỹ năng giả lập, bản đồ tổng quan, vị trí hồi sinh và khám phá địa điểm. Không di dời các nhà trên nền đã vẽ.
 - `preview.html` dùng để xem trực tiếp mã game bằng dịch vụ static preview khi GitHub Pages chưa cập nhật tự động.
 
+
+## NPC V1 — dân làng và sứ giả đại tông môn
+
+- **7 cư dân Thôn Khởi Nguyên**: Trưởng thôn (giữ sprite cũ), Dược sư, Luyện đan sư, Thợ rèn, Người bán trang bị, Thương nhân và Người bán công pháp.
+- Mỗi nhân vật có sprite pixel 32×32, trang phục nhận diện nghề nghiệp, hội thoại riêng, hoạt ảnh tại chỗ; một số cư dân đi lại ngắn trong sân nhà. Sprite không dùng ảnh bên ngoài.
+- Đến gần NPC và nhấn **E**, **Enter** hoặc nút **Trò chuyện** trên điện thoại để đối thoại. Tiến độ chào hỏi **0/7 → 7/7** được lưu cùng tiến độ khám phá hiện có qua localStorage; save cũ vẫn đọc được.
+- Menu ☰ → **Sứ giả 8 đại tông môn** hiển thị 8 sprite riêng biệt (Kiếm Tông, Đạo Tông, Ngự Thú Sơn, Phật Tự, Huyết Sát, U Minh, Vạn Độc, Cửu U) để xem trước.
+- **Chưa đưa sứ giả vào Thôn Khởi Nguyên**: chúng thuộc Tiên Duyên Trấn ở giai đoạn mở map tiếp theo. Chưa có mua bán thực tế, hệ công pháp, Trúc Cơ hay chức năng tuyển đệ tử; hội thoại hiện chỉ cung cấp thông tin cốt truyện.
+- Map B, các nhà, lối đi, va chạm, minimap, HUD và 6 ô kỹ năng được giữ nguyên. Không tạo nhánh Git mới.
+- `npcs.js`: dữ liệu NPC, palette sprite 4 hướng, hoạt ảnh và tương tác cự ly; `tests/npcs.test.cjs`: kiểm tra NPC không mắc kẹt, đủ 8 sứ giả và tính hợp lệ của sprite.
+
+`npm test` chạy kiểm tra đường đi **và** NPC; `node --check game.js` và `node --check npcs.js` để kiểm tra cú pháp.
