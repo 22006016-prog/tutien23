@@ -8,3 +8,19 @@
 /* Map B preserves the illustrated background and uses native-resolution canvas. */
 #game{image-rendering:pixelated}
 .overview-image img{image-rendering:auto}
+
+/* NPC codex: player-facing preview, separate from the existing map and HUD. */
+.npc-codex{position:absolute;inset:0;z-index:18;background:#081b23df;display:grid;place-items:center;padding:12px}
+.npc-codex-panel{width:min(650px,100%);max-height:calc(100dvh - 24px);overflow:auto;background:#172a34;border:1px solid #c4ae76;border-radius:12px;padding:16px;box-shadow:0 20px 75px #07131eaa}
+.npc-codex-panel header{display:flex;justify-content:space-between;gap:12px;align-items:center}
+.npc-codex-panel header small{font-size:10px;letter-spacing:1.5px;color:#d7bd80}
+.npc-codex-panel h2{font:21px Georgia,serif;color:#f1d8a0;margin:5px 0}
+.npc-codex-panel header button{font-size:24px;min-width:40px;min-height:40px}
+.npc-codex-panel p{font-size:12px;line-height:1.6;color:#c3d0c5}
+.npc-codex-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:14px}
+.npc-codex-row{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid #9a966341;background:#263746;border-radius:8px;min-width:0}
+.npc-codex-row img{width:48px;height:48px;image-rendering:pixelated;flex:none}
+.npc-codex-row div{min-width:0}
+.npc-codex-row strong{display:block;font-size:12px;color:#e9d9a3}
+.npc-codex-row small{display:block;font-size:10px;color:#afc0c5;margin-top:4px;line-height:1.4}
+@media(max-width:550px){.npc-codex-list{grid-template-columns:1fr}.npc-codex-panel{padding:11px}.npc-codex-panel h2{font-size:17px}.npc-codex-row{padding:7px}}
