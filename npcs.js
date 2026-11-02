@@ -52,7 +52,41 @@ function sprite(n,dir='down',frame=0){
  if(n.role==='merchant'){r(12,3,12,4,'#82604c');r(14,1,8,3,n.trim);r(10,24,5,5,'#cba05f');}
  if(n.role==='books'){r(11,3,14,4,n.outer);r(14,2,9,3,n.trim);r(24,21,5,7,'#cdbb93');r(25,21,3,5,'#f2e5c2');}
  if(n.role==='equip'){r(10,3,15,4,'#a3b7c8');r(12,1,11,4,n.outer);r(2,16,6,10,'#a2b6ca');r(4,18,2,6,'#dce6e6');}
- if(n.role==='envoy'){r(10,2,16,5,n.trim);r(12,1,12,4,n.outer);r(15,17,6,4,n.trim);r(16,18,3,2,'#fff3c2');r(26,8,2,18,'#d9cfb8');r(25,6,4,3,n.trim);}
+ if(n.role==='envoy'){
+  r(10,2,16,5,n.trim);r(12,1,12,4,n.outer);r(15,17,6,4,n.trim);
+  r(16,18,3,2,'#fff3c2');
+  // Individual sect silhouettes: not just recolors of one uniform.
+  switch(n.id){
+   case 'envoy-lang-van': // pale sword guard and winged hair clasp
+    r(8,4,5,2,'#cce9ef');r(20,4,6,2,'#cce9ef');
+    r(27,11,2,18,'#c0dae2');r(26,9,4,2,'#ebd39a');break;
+   case 'envoy-thai-hu': // broad Taoist cap, long divination staff
+    r(8,3,19,2,'#deedee');r(13,0,9,5,n.outer);
+    r(27,8,2,21,'#d6cfa8');r(25,7,6,4,'#b4e7f0');break;
+   case 'envoy-van-linh': // beast-tamer horn tips and spirit beast
+    r(9,2,4,5,'#cce9be');r(23,2,4,5,'#cce9be');
+    r(25,26,6,4,'#b7d5a7');r(27,24,4,3,'#dae6bd');break;
+   case 'envoy-dai-nhat': // shaven crown and golden Buddhist beads
+    r(11,3,14,10,skin);r(12,3,11,2,'#efdbac');
+    r(10,17,15,3,'#f6dc83');r(15,20,2,2,'#ad7d3f');
+    r(25,20,3,7,'#cca45f');break;
+   case 'envoy-huyet-sat': // shadow hood and blood blade
+    r(10,2,15,6,'#392335');r(11,6,2,8,'#392335');r(22,6,3,8,'#392335');
+    r(27,11,2,18,'#d84c70');r(25,12,6,2,'#e9a1a4');break;
+   case 'envoy-u-minh': // veiled face, ghost lantern
+    r(11,6,13,9,'#302a4b');r(13,9,9,3,'#a6a2cb');
+    r(26,15,3,2,'#99a6ff');r(25,17,5,8,'#7451ab');
+    r(26,18,3,3,'#d7ccff');break;
+   case 'envoy-van-doc': // poisonous vials, masked face
+    r(10,4,16,6,'#314a38');r(12,12,12,3,'#b1d87f');
+    r(26,19,4,9,'#458c61');r(26,18,4,3,'#e4df9f');
+    r(27,22,2,3,'#d0f390');break;
+   case 'envoy-cuu-u': // black-fire crown and twisted staff
+    r(11,0,4,6,'#e57465');r(20,0,4,6,'#e57465');
+    r(26,9,2,20,'#302439');r(23,6,7,6,'#a4509e');
+    r(26,5,3,3,'#ef996e');break;
+  }
+ }
  if(n.role==='smith'){r(25,15,3,12,'#75543b');r(22,13+(frame?2:0),9,4,'#9ea8b4');}
  if(n.role==='alchemist'){r(25,21,6,6,'#5e7775');r(26,22,4,2,'#b4e0b2');}
  if(n.role==='healer'){r(24,21,5,8,'#6a9f8a');r(25,21,3,2,'#edf1cf');}
@@ -80,10 +114,11 @@ function draw(ctx,n,clock){
  const im=sprite(n,n.heading,frame);
  ctx.imageSmoothingEnabled=false;
  ctx.drawImage(im,Math.round(n.x-16),Math.round(n.y-30+bob));
+ const label=({equip:'Trang bị',books:'Công pháp',alchemist:'Luyện đan'})[n.role]||n.name;
  ctx.font='7px monospace';ctx.textAlign='center';
- ctx.fillStyle='#132b32';ctx.fillText(n.name,Math.round(n.x+1),Math.round(n.y-38));
+ ctx.fillStyle='#132b32';ctx.fillText(label,Math.round(n.x+1),Math.round(n.y-38));
  ctx.fillStyle=n.role==='elder'?'#f7dfad':'#f4e5c8';
- ctx.fillText(n.name,Math.round(n.x),Math.round(n.y-39));
+ ctx.fillText(label,Math.round(n.x),Math.round(n.y-39));
  if(n.role==='alchemist'&&Math.sin(n.phase*3)>0.1){
   ctx.fillStyle='#d5eeb7a0';ctx.fillRect(Math.round(n.x+11),Math.round(n.y-34),2,4);
  }
