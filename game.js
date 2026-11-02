@@ -1,8 +1,8 @@
 'use strict';
 const canvas=document.querySelector('#game'),ctx=canvas.getContext('2d'),V=Village;
 let width=960,height=540,scale=1,clock=0,last=0,walking=false,facing=1,saveTime=0,toastTime=5,dialogOpen=false;
-const player={...V.spawn},visited=new Set(),keys=new Set(),joy={x:0,y:0};let storage=true;
-try{const s=JSON.parse(localStorage.getItem('tutien-v1'));if(s){if(s.version===V.version&&Number.isFinite(s.x)&&Number.isFinite(s.y)&&!V.blocked(s.x,s.y)){player.x=s.x;player.y=s.y;}if(Array.isArray(s.visited))s.visited.filter(n=>V.places.some(p=>p.name===n)).forEach(n=>visited.add(n));}}catch{storage=false;}
+const player={...V.spawn},visited=new Set(),greeted=new Set(),keys=new Set(),joy={x:0,y:0};let storage=true;
+try{const s=JSON.parse(localStorage.getItem('tutien-v1'));if(s){if(s.version===V.version&&Number.isFinite(s.x)&&Number.isFinite(s.y)&&!V.blocked(s.x,s.y)){player.x=s.x;player.y=s.y;}if(Array.isArray(s.visited))s.visited.filter(n=>V.places.some(p=>p.name===n)).forEach(n=>visited.add(n));if(Array.isArray(s.greeted))s.greeted.filter(id=>NPCs.villagers.some(n=>n.id===id)).forEach(id=>greeted.add(id));}}catch{storage=false;}
 const $=s=>document.querySelector(s);
 let cameraZoom=1;
 try{const savedZoom=Number(localStorage.getItem('tutien-camera-zoom-b10'));if(Number.isFinite(savedZoom)&&savedZoom>=.85&&savedZoom<=1.65)cameraZoom=savedZoom;}catch{}
@@ -13,16 +13,16 @@ function ellipse(x,y,rx,ry,c){ctx.fillStyle=c;ctx.beginPath();ctx.ellipse(x,y,rx
 function text(t,x,y,c='#f0e7bf',size=7){ctx.font=`${size}px monospace`;ctx.textAlign='center';ctx.fillStyle='#203c2b';ctx.fillText(t,x+1,y+1);ctx.fillStyle=c;ctx.fillText(t,x,y);}
 function character(x,y,npc=false){const frame=walking&&!npc?(Math.floor(clock*9)%3):0;const direction=facing===0?'up':facing===2?'left':facing===3?'right':'down';const sprite=npc?PixelTiles.sprites.elder:PixelTiles.sprites['hero-'+direction+'-'+frame];rect(x-8,y-1,16,3,'#213d3655');ctx.drawImage(sprite,Math.round(x-16),Math.round(y-30));if(npc)text('Trưởng thôn',x,y-39,'#e5d6a5',7);}
 
-function render(){ctx.clearRect(0,0,width,height);ctx.save();ctx.scale(scale,scale);const vw=width/scale,vh=height/scale;const cx=Math.max(0,Math.min(Math.max(0,V.W-vw),player.x-vw/2)),cy=Math.max(0,Math.min(Math.max(0,V.H-vh),player.y-vh/2));ctx.translate(-Math.round(cx),-Math.round(cy));Scenery.ground();if(Scenery.ready){Wildlife.draw(ctx);const people=[{...V.elder,npc:true},{...player,npc:false}].sort((a,b)=>a.y-b.y);for(const person of people){character(person.x,person.y,person.npc);if(!person.npc)text('Vô Danh',player.x,player.y-39,'#fff0c9',7);}drawEffect();for(let i=0;i<22;i++){const x=(i*137+clock*5)%V.W,y=(i*211+Math.sin(clock*.7+i)*9)%V.H;rect(x,y,1,1,'#f3d4c699');}}ctx.restore();}
+function render(){ctx.clearRect(0,0,width,height);ctx.save();ctx.scale(scale,scale);const vw=width/scale,vh=height/scale;const cx=Math.max(0,Math.min(Math.max(0,V.W-vw),player.x-vw/2)),cy=Math.max(0,Math.min(Math.max(0,V.H-vh),player.y-vh/2));ctx.translate(-Math.round(cx),-Math.round(cy));Scenery.ground();if(Scenery.ready){Wildlife.draw(ctx);const people=[...NPCs.villagers.map(n=>({...n,npc:true})),{...player,npc:false}].sort((a,b)=>a.y-b.y);for(const person of people){if(person.npc)NPCs.draw(ctx,person,clock);else{character(person.x,person.y,false);text('Vô Danh',player.x,player.y-39,'#fff0c9',7);}}drawEffect();for(let i=0;i<22;i++){const x=(i*137+clock*5)%V.W,y=(i*211+Math.sin(clock*.7+i)*9)%V.H;rect(x,y,1,1,'#f3d4c699');}}ctx.restore();}
 
 function toast(s){$('#toast').textContent=s;toastTime=4;$('#toast').style.opacity=1;}
-function save(){try{localStorage.setItem('tutien-v1',JSON.stringify({...player,version:V.version,visited:[...visited]}));}catch{storage=false;}$('#save-state').textContent=storage?'◈ Đã lưu hành trình trên thiết bị':'◈ Không thể lưu trên trình duyệt này';}
-function update(dt){clock+=dt;if(Scenery.ready&&!dialogOpen&&$('#map-overview').hidden)Wildlife.update(dt,player);let dx=Number(keys.has('d')||keys.has('arrowright'))-Number(keys.has('a')||keys.has('arrowleft'))+joy.x,dy=Number(keys.has('s')||keys.has('arrowdown'))-Number(keys.has('w')||keys.has('arrowup'))+joy.y;let len=Math.hypot(dx,dy);walking=len>.1&&!dialogOpen&&Scenery.ready&&$('#map-overview').hidden;if(walking){meditating=false;if(len>1){dx/=len;dy/=len;}let speed=(keys.has('shift')?155:95)*dt;if(Math.abs(dx)>Math.abs(dy))facing=dx<0?2:3;else if(dy<0)facing=0;else if(dy>0)facing=1;if(!V.blocked(player.x+dx*speed,player.y))player.x+=dx*speed;if(!V.blocked(player.x,player.y+dy*speed))player.y+=dy*speed;}
+function save(){try{localStorage.setItem('tutien-v1',JSON.stringify({...player,version:V.version,visited:[...visited],greeted:[...greeted]}));}catch{storage=false;}$('#save-state').textContent=storage?'◈ Đã lưu hành trình trên thiết bị':'◈ Không thể lưu trên trình duyệt này';}
+function update(dt){clock+=dt;if(Scenery.ready&&!dialogOpen&&$('#map-overview').hidden&&$('#npc-codex').hidden){Wildlife.update(dt,player);NPCs.update(dt);}let dx=Number(keys.has('d')||keys.has('arrowright'))-Number(keys.has('a')||keys.has('arrowleft'))+joy.x,dy=Number(keys.has('s')||keys.has('arrowdown'))-Number(keys.has('w')||keys.has('arrowup'))+joy.y;let len=Math.hypot(dx,dy);walking=len>.1&&!dialogOpen&&Scenery.ready&&$('#map-overview').hidden&&$('#npc-codex').hidden;if(walking){meditating=false;if(len>1){dx/=len;dy/=len;}let speed=(keys.has('shift')?155:95)*dt;if(Math.abs(dx)>Math.abs(dy))facing=dx<0?2:3;else if(dy<0)facing=0;else if(dy>0)facing=1;if(!V.blocked(player.x+dx*speed,player.y))player.x+=dx*speed;if(!V.blocked(player.x,player.y+dy*speed))player.y+=dy*speed;}
 for(const p of V.places)if(Math.hypot(player.x-p.x,player.y-p.y)<85&&!visited.has(p.name)){visited.add(p.name);toast(visited.size===4?'✧ Hoàn thành: Bước chân đầu tiên!':'Đã khám phá: '+p.name);save();}
-$('#progress').textContent=`Địa điểm đã ghé: ${visited.size} / 4`;$('#interact').hidden=dialogOpen||Math.hypot(player.x-V.elder.x,player.y-V.elder.y)>65;
+$('#progress').textContent='Đã chào hỏi: '+greeted.size+' / 7 · Đã khám phá: '+visited.size+' / 4';const nearby=NPCs.nearest(player.x,player.y);$('#interact').hidden=dialogOpen||!nearby||!$('#npc-codex').hidden||!$('#map-overview').hidden;$('#interact').setAttribute('aria-label',nearby?'Trò chuyện với '+nearby.name:'Trò chuyện');
 toastTime-=dt;if(toastTime<0)$('#toast').style.opacity=0;saveTime+=dt;if(saveTime>3){save();saveTime=0;}}
 function loop(t){const dt=Math.min((t-last)/1000||0,.035);last=t;update(dt);render();requestAnimationFrame(loop);}requestAnimationFrame(loop);
-function interact(){if(dialogOpen){dialogOpen=false;$('#dialog').hidden=true;return;}if(Math.hypot(player.x-V.elder.x,player.y-V.elder.y)>65)return;dialogOpen=true;$('#dialog p').textContent='Thiếu hiệp mới đến sao? Đây là Thôn Khởi Nguyên. Hãy ghé dược đường phía tây, tiệm rèn phía đông và cây cổ thụ ở phía nam. Tiên lộ còn dài, cứ thong thả bước đi.';$('#dialog').hidden=false;}
+function interact(){if(dialogOpen){dialogOpen=false;$('#dialog').hidden=true;return;}if(!$('#map-overview').hidden||!$('#npc-codex').hidden)return;const npc=NPCs.nearest(player.x,player.y);if(!npc)return;dialogOpen=true;$('#dialog-name').textContent=npc.name.toUpperCase();$('#dialog p').textContent=npc.greet;$('#dialog').hidden=false;if(!greeted.has(npc.id)){greeted.add(npc.id);save();if(greeted.size===NPCs.villagers.length){$('.quest strong').textContent='1. Đã chào hỏi tất cả dân làng';toast('✧ Hoàn thành: Chào hỏi dân làng!');}else toast('Đã chào hỏi '+npc.name+' ('+greeted.size+'/7)');}}
 window.addEventListener('keydown',e=>{if(e.target instanceof HTMLInputElement||e.target instanceof HTMLTextAreaElement)return;if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();keys.add(e.key.toLowerCase());if(!e.repeat&&(e.key.toLowerCase()==='e'||e.key==='Enter'))interact();});window.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));window.addEventListener('blur',()=>{keys.clear();joy.x=joy.y=0;});document.addEventListener('visibilitychange',()=>{keys.clear();joy.x=joy.y=0;save();});
 $('#interact').onclick=interact;$('#close-dialog').onclick=interact;$('#quest-toggle').onclick=()=>{const collapsed=$('.quest').classList.toggle('collapsed');$('#quest-toggle').textContent=collapsed?'+':'−';$('#quest-toggle').setAttribute('aria-label',collapsed?'Mở nhiệm vụ':'Thu gọn nhiệm vụ');};
 let pointer=null;function moveStick(e){const r=$('#joystick').getBoundingClientRect();let x=e.clientX-r.left-r.width/2,y=e.clientY-r.top-r.height/2,len=Math.hypot(x,y),m=Math.min(1,34/(len||1));x*=m;y*=m;joy.x=x/34;joy.y=y/34;$('#stick').style.transform=`translate(${x}px,${y}px)`;}
@@ -33,7 +33,7 @@ window.addEventListener('pagehide',save);
 
 let effect=null,meditating=false;
 const skillNames=['Kiếm khí','Thanh phong','Băng trụ','Lôi quang','Ảnh bộ','Hỏa liên'];
-function cast(index){if(dialogOpen||!Scenery.ready||!$('#map-overview').hidden)return;meditating=false;effect={index,start:clock};const buttons=document.querySelectorAll('[data-skill]');buttons.forEach(b=>b.classList.toggle('active',Number(b.dataset.skill)===index));setTimeout(()=>buttons.forEach(b=>b.classList.remove('active')),700);}
+function cast(index){if(dialogOpen||!Scenery.ready||!$('#map-overview').hidden||!$('#npc-codex').hidden)return;meditating=false;effect={index,start:clock};const buttons=document.querySelectorAll('[data-skill]');buttons.forEach(b=>b.classList.toggle('active',Number(b.dataset.skill)===index));setTimeout(()=>buttons.forEach(b=>b.classList.remove('active')),700);}
 function drawEffect(){if(meditating){const pulse=24+Math.sin(clock*2)*4;ellipse(player.x,player.y+2,pulse,pulse*.4,'#a8dddc33');ctx.strokeStyle='#d5d7a2';ctx.lineWidth=1;ctx.beginPath();ctx.ellipse(player.x,player.y+2,pulse,pulse*.4,0,0,Math.PI*2);ctx.stroke();}if(!effect)return;const t=clock-effect.start;if(t>0.7){effect=null;return;}const colors=['#cef4ff','#91efc7','#95bbff','#ffe7a4','#c9a4f6','#ffa16e'];ctx.save();ctx.globalAlpha=1-t/.7;ctx.strokeStyle=colors[effect.index];ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(player.x,player.y-15,15+t*65,10+t*35,-t*3,0,Math.PI*1.7);ctx.stroke();for(let i=0;i<8;i++){const a=i*Math.PI/4+t*4;rect(player.x+Math.cos(a)*(18+t*50),player.y-15+Math.sin(a)*(18+t*35),3,6,colors[effect.index]);}ctx.restore();}
 document.querySelectorAll('[data-skill]').forEach(b=>b.onclick=()=>cast(Number(b.dataset.skill)));
 $('#menu-toggle').onclick=()=>{const open=$('#menu').hidden;$('#menu').hidden=!open;$('#menu-toggle').setAttribute('aria-expanded',String(open));};
@@ -71,3 +71,22 @@ const cameraInput=$('#camera-zoom');
 cameraInput.value=Math.round(cameraZoom*100);
 $('#camera-zoom-value').textContent=Math.round(cameraZoom*100)+'%';
 cameraInput.addEventListener('input',e=>{const value=Number(e.target.value);if(!Number.isFinite(value))return;cameraZoom=Math.max(.85,Math.min(1.65,value/100));$('#camera-zoom-value').textContent=Math.round(cameraZoom*100)+'%';try{localStorage.setItem('tutien-camera-zoom-b10',String(cameraZoom));}catch{}resize();});
+
+// Preview catalog for the eight sect messengers. They are not spawned in this village.
+const npcCodexList=$('#npc-codex-list');
+for(const envoy of NPCs.envoys){
+ const item=document.createElement('div');item.className='npc-codex-row';
+ const portrait=document.createElement('img');portrait.src=NPCs.sprite(envoy,'down',0).toDataURL('image/png');portrait.alt='';portrait.width=48;portrait.height=48;
+ const desc=document.createElement('div'),name=document.createElement('strong'),sect=document.createElement('small');
+ name.textContent=envoy.sect;sect.textContent=envoy.name+' · Sẽ xuất hiện ở Tiên Duyên Trấn';
+ desc.append(name,sect);item.append(portrait,desc);npcCodexList.append(item);
+}
+function toggleNpcCodex(show){
+ $('#npc-codex').hidden=!show;keys.clear();joy.x=joy.y=0;walking=false;
+ $('#menu').hidden=true;$('#menu-toggle').setAttribute('aria-expanded','false');
+ if(show)$('#close-npc-codex').focus();else canvas.focus();
+}
+$('#open-npc-codex').onclick=()=>toggleNpcCodex(true);
+$('#close-npc-codex').onclick=()=>toggleNpcCodex(false);
+window.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#npc-codex').hidden){e.preventDefault();toggleNpcCodex(false);}});
+if(greeted.size===NPCs.villagers.length)$('.quest strong').textContent='1. Đã chào hỏi tất cả dân làng';
